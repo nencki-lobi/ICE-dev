@@ -1,0 +1,121 @@
+---
+title: "GRIEG questionnaire data analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(psych)
+library(EFA.dimensions)
+```
+
+## Load data
+
+We start by loading the input data. We have data from two surveys (`survey176496` and `survey381735`), both have (almost) identical structure (names of some of the columns containing timing information differ).
+
+```{r}
+input1 = read.table ("./input/176496/results-survey176496.csv", header = T, sep = ",")
+input2 = read.table ("./input/381735/results-survey381735.csv", header = T, sep = ",")
+```
+
+## Filter data
+
+Moreover, we want to filter the data based on previously performed quality check analysis. In this analysis we used the following criteria:
+
+* consistent reporting of demographic data (sex, age)
+* correct responses to 2 out of 3 control questions
+
+As this is currently implemented in other script (written in MATLAB), we will import additional `.csv` files that contain lists of valid tokens for each survey and we will use this information to filter the data.
+
+```{r}
+valid1 = read.table ("./input/176496/valid.csv", header = T, sep = "\t")
+valid2 = read.table ("./input/381735/valid.csv", header = T, sep = "\t")
+
+dataset1 <- filter(input1,token %in% valid1$token)
+dataset2 <- filter(input2,token %in% valid2$token)
+```
+
+## Combine data
+
+Next, we need to combine the two datasets.
+
+We can see that only columns `14:184` contain relevant data (questionnaire items).
+
+``` {r}
+colnames(dataset1[,14:184])
+```
+
+Therefore, we combine the two datasets keeping only relevant columns. Also, let's convert the data to `dataframe` for convenience.
+
+```{r}
+dataset = rbind(dataset1[,14:184], dataset2[,14:184])
+dataset = data.frame(dataset)
+```
+
+## Convert data
+
+Initially, the imported data is in `char` format. We need to use a format more suitable for the analysis (either `factor` or `int`):
+
+``` {r}
+# recode to `factor` (categorical):
+dataset = dataset %>%
+  mutate_at(vars(1:171),
+            ~factor(recode(.,
+                           "Zdecydowanie nie" = 1,
+                           "Raczej nie " = 2,
+                           "Ani tak, ani nie" = 3,
+                           "Raczej tak " = 4,
+                           "Zdecydowanie tak" = 5)), ordered = TRUE)
+
+# recode to `int` (numeric):
+# dataset = dataset %>%
+#   mutate_at(vars(1:171),
+#             list(~recode(.,
+#                            "Zdecydowanie nie" = 1,
+#                            "Raczej nie " = 2,
+#                            "Ani tak, ani nie" = 3,
+#                            "Raczej tak " = 4,
+#                            "Zdecydowanie tak" = 5)))
+```
+
+## Reliability analysis
+
+We want to identify items that best represent a given emotion construct (e.g. anger). Specifically, for each item we want to assess how well it correlates with all the other items representing the same emotion construct. 
+
+Thus, we first need to split the data according to emotions.
+
+``` {r}
+ANG = select(dataset,contains('.ANG')) # anger
+APP = select(dataset,contains('.APP')) # apprehension
+EMP = select(dataset,contains('.EMP')) # empowerment
+GUI = select(dataset,contains('.GUI')) # guilt
+HOPF = select(dataset,contains('.HOPF')) # hopefulness
+HOPL = select(dataset,contains('.HOPL')) # hopelessness
+IRR = select(dataset,contains('.IRR')) # irritation
+ISO = select(dataset,contains('.ISO')) # isolation
+POWL = select(dataset,contains('.POWL')) # powerlessness
+SOR = select(dataset,contains('.SOR')) # sorrow
+
+DIS = select(dataset,contains('.DIS')) # discontent
+IND = select(dataset,contains('.IND')) # indifference
+```
+
+Let's start by inspecting the anger items:
+
+``` {r}
+str(ANG)
+```
+
+``` {r}
+
+```
+
+## Note
+
+```{r, echo=FALSE}
+# use this block, to print output only (no r syntax)
+```
+
+Note that the `echo = FALSE` parameter was added to some of the R code chunks to prevent them from printing.
