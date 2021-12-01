@@ -15,12 +15,15 @@ library(EFA.dimensions)
 
 ## Load data
 
-We start by loading the input data. We have data from two surveys (`survey176496` and `survey381735`), both have (almost) identical structure (names of some of the columns containing timing information differ).
+We start by loading the input data. We have data from three surveys (`survey176496`, `survey381735`, and `survey977613`), each with (almost) identical structure (number of columns differ, names of some of the columns differ).
 
 ```{r}
 input1 = read.table ("./input/176496/results-survey176496.csv", header = T, sep = ",")
 input2 = read.table ("./input/381735/results-survey381735.csv", header = T, sep = ",")
+input3 = read.table ("./input/977613/results-survey977613.csv", header = T, sep = ",")
 ```
+
+`survey176496` and `survey381735` contain data from the general population (recruited by professional recruitment company), and `survey977613` contains data from climate activists (recruited via social media). 
 
 ## Filter data
 
@@ -31,28 +34,31 @@ Moreover, we want to filter the data based on previously performed quality check
 
 As this is currently implemented in other script (written in MATLAB), we will import additional `.csv` files that contain lists of valid tokens for each survey and we will use this information to filter the data.
 
+**NOTE:** This step is applicable only to `survey176496` and `survey381735`. Therefore, we leave `survey977613` intact. 
+
 ```{r}
 valid1 = read.table ("./input/176496/valid.csv", header = T, sep = "\t")
 valid2 = read.table ("./input/381735/valid.csv", header = T, sep = "\t")
 
-dataset1 <- filter(input1,token %in% valid1$token)
-dataset2 <- filter(input2,token %in% valid2$token)
+dataset1 = filter(input1,token %in% valid1$token)
+dataset2 = filter(input2,token %in% valid2$token)
+dataset3 = input3
 ```
 
 ## Combine data
 
-Next, we need to combine the two datasets.
+Next, we need to combine the datasets.
 
-We can see that only columns `14:184` contain relevant data (questionnaire items).
+We are only interested in keeping columns that contain relevant data (questionnaire items). These data is stored in columns `14:184` in the case of `dataset1` and `dataset2`, but in columns `13:183` in the case of `dataset3`.
 
 ``` {r}
 colnames(dataset1[,14:184])
 ```
 
-Therefore, we combine the two datasets keeping only relevant columns. Also, let's convert the data to `dataframe` for convenience.
+Therefore, we combine the datasets keeping only relevant columns. Also, let's convert the final dataset to `dataframe` for convenience.
 
 ```{r}
-dataset = rbind(dataset1[,14:184], dataset2[,14:184])
+dataset = rbind(dataset1[,14:184], dataset2[,14:184], dataset3[,13:183])
 dataset = data.frame(dataset)
 ```
 
