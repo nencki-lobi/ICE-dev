@@ -159,10 +159,20 @@ DIS = select(dataset,contains('.DIS')) # discontent
 IND = select(dataset,contains('.IND')) # indifference
 ```
 
-Let's start by inspecting the anger items:
+We assess the reliability, by calculating Cronbach's alpha for each emotion separately:
 
 ``` {r}
-str(ANG)
+EMOTIONS = list(ANG, APP, EMP, GUI, HOPF, HOPL, IRR, ISO, POWL, SOR, DIS, IND)
+labels = list("anger", "apprehension", "empowerment", "guilt",
+              "hopefulness", "hopelessness", "irritation", "isolation",
+              "powerlessness", "sorrow", "discontent", "indifference")
+
+for (i in 1:length(EMOTIONS)) {
+  cat(sprintf("\n =============================================================================
+               \n EMOTION: %s \n", labels[[i]]))
+  out = alpha(EMOTIONS[[i]]) # Cronbach's alpha
+  print(out)
+}
 ```
 
 ## Exploratory factor analysis (EFA)
