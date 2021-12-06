@@ -68,24 +68,24 @@ Initially, the imported data is in `char` format. We need to use a format more s
 
 ``` {r}
 # recode to `factor` (categorical):
-dataset = dataset %>%
-  mutate_at(vars(1:171),
-            ~factor(recode(.,
-                           "Zdecydowanie nie" = 1,
-                           "Raczej nie " = 2,
-                           "Ani tak, ani nie" = 3,
-                           "Raczej tak " = 4,
-                           "Zdecydowanie tak" = 5)), ordered = TRUE)
-
-# recode to `int` (numeric):
 # dataset = dataset %>%
 #   mutate_at(vars(1:171),
-#             list(~recode(.,
+#             ~factor(recode(.,
 #                            "Zdecydowanie nie" = 1,
 #                            "Raczej nie " = 2,
 #                            "Ani tak, ani nie" = 3,
 #                            "Raczej tak " = 4,
-#                            "Zdecydowanie tak" = 5)))
+#                            "Zdecydowanie tak" = 5)), ordered = TRUE)
+
+# recode to `int` (numeric):
+dataset = dataset %>%
+  mutate_at(vars(1:171),
+            list(~recode(.,
+                           "Zdecydowanie nie" = 1,
+                           "Raczej nie " = 2,
+                           "Ani tak, ani nie" = 3,
+                           "Raczej tak " = 4,
+                           "Zdecydowanie tak" = 5)))
 ```
 
 ## Data cleaning
@@ -163,6 +163,40 @@ Let's start by inspecting the anger items:
 
 ``` {r}
 str(ANG)
+```
+
+## Exploratory factor analysis (EFA)
+
+First, we need to decide on the number of factors to extract. We use `RAWPAR`, that is parallel analysis of eigenvalues ([Horn, 1965](https://link.springer.com/article/10.1007/BF02289447)).
+
+The parallel analysis procedure for deciding on the number of components or factors involves extracting eigenvalues from random data sets that parallel the actual data set with regard to the number of cases and variables. For example, if the original data set consists of 620 observations for each of 171 variables, then a series of random data matrices of this size (620 by 171) would be generated, and eigenvalues would be computed for the correlation matrices for the original, real data and for each of the random data sets. The eigenvalues derived from the actual data are then compared to the eigenvalues derived from the random data.  In Horn's original description of this procedure, the mean eigenvalues from the random data served as the comparison baseline, whereas the more common current practice is to use the eigenvalues that correspond to the desired percentile (typically the 95th) of the distribution of random data eigenvalues. Factors or components are retained as long as the ith eigenvalue from the actual data is greater than the ith eigenvalue from the random data.
+
+**NOTE:** We use `polychoric` correlations!
+
+``` {r}
+#RAWPAR(dataset, randtype = "permuted", Ndatasets=1000, factormodel="PCA", percentile=95, corkind="polychoric", corkindRAND="polychoric", verbose=T)
+```
+
+We can now proceed to the exploratory factor analysis (EFA). We assume the number of factors to extract based on the result of the `RAWPAR` analysis.
+
+**NOTE:** We use `polychoric` correlations!
+
+``` {r, message = FALSE, results = 'hide'}
+PA = PA_FA(dataset, corkind="polychoric", Nfactors=6, iterpaf=250, rotate="none", verbose=T)
+```
+
+Next, we perform factor rotation in a separate step.
+
+``` {r, message = FALSE, results = 'hide'}
+loadings = PA$loadingsNOROT
+rotated = PROMAX(loadings, ppower=4, verbose=T)
+rotated = rotated$pattern
+```
+
+And finally, we clean the output with a chosen threshold. This step is only done to facilitate the decision process.
+
+``` {r}
+(rotated = ifelse(abs(rotated)<0.4, '', rotated))
 ```
 
 ``` {r}
