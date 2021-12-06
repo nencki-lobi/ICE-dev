@@ -7,6 +7,7 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+options(knitr.kable.NA = '')
 
 library(knitr)
 library(dplyr)
@@ -198,7 +199,7 @@ for (i in 1:length(EMOTIONS)) {
 }
 ```
 
-## Exploratory factor analysis (EFA)
+## Exploratory factor analysis (EFA) {.tabset}
 
 First, we need to decide on the number of factors to extract. We use `RAWPAR`, that is parallel analysis of eigenvalues ([Horn, 1965](https://link.springer.com/article/10.1007/BF02289447)).
 
@@ -229,7 +230,7 @@ rotated = rotated$pattern
 And finally, we clean the output with a chosen threshold. This step is only done to facilitate the decision process.
 
 ``` {r, echo=FALSE}
-#rotated = ifelse(abs(rotated) > 0.4, rotated, '')
+#rotated = ifelse(abs(rotated) > 0.4, rotated, NA)
 #kable(rotated)
 ```
 
@@ -252,10 +253,20 @@ for (i in 1:nrow(rotated)) {
   test = rep(FALSE, length(tmp))
   test[max1] = criterion1 & criterion2
   
-  thresholded[i,] = ifelse(test, tmp, '')
+  thresholded[i,] = ifelse(test, tmp, NA)
 }
+```
 
-kable(thresholded)
+### Thresholded
+
+``` {r}
+kable(thresholded, digits = 2)
+```
+
+### Unthresholded
+
+``` {r}
+kable(rotated, digits = 2)
 ```
 
 ``` {r}
