@@ -8,6 +8,7 @@ editor_options:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+library(knitr)
 library(dplyr)
 library(psych)
 library(EFA.dimensions)
@@ -161,17 +162,31 @@ IND = select(dataset,contains('.IND')) # indifference
 
 We assess the reliability, by calculating Cronbach's alpha for each emotion separately:
 
-``` {r}
+``` {r, results='asis'}
 EMOTIONS = list(ANG, APP, EMP, GUI, HOPF, HOPL, IRR, ISO, POWL, SOR, DIS, IND)
 labels = list("anger", "apprehension", "empowerment", "guilt",
               "hopefulness", "hopelessness", "irritation", "isolation",
               "powerlessness", "sorrow", "discontent", "indifference")
 
 for (i in 1:length(EMOTIONS)) {
-  cat(sprintf("\n =============================================================================
-               \n EMOTION: %s \n", labels[[i]]))
+  
   out = alpha(EMOTIONS[[i]]) # Cronbach's alpha
-  print(out)
+  
+  cat(sprintf("\n **EMOTION: %s** \n", labels[[i]]))
+  
+  cat(sprintf("\n Reliability analysis:"))
+  print(kable(out$total))
+  
+  cat(sprintf("\n Reliability if an item is dropped:"))
+  print(kable(out$alpha.drop))
+  
+  cat(sprintf("\n Item statistics:"))
+  print(kable(out$item.stats))
+  
+  cat(sprintf("\n Non missing response frequency for each item:"))
+  print(kable(out$response.freq))
+  
+  cat("\n")
 }
 ```
 
@@ -206,7 +221,8 @@ rotated = rotated$pattern
 And finally, we clean the output with a chosen threshold. This step is only done to facilitate the decision process.
 
 ``` {r}
-(rotated = ifelse(abs(rotated)<0.4, '', rotated))
+rotated = ifelse(abs(rotated)<0.4, '', rotated)
+kable(rotated)
 ```
 
 ``` {r}
