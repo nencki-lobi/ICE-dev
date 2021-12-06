@@ -13,6 +13,13 @@ library(dplyr)
 library(psych)
 library(EFA.dimensions)
 ```
+## Load items
+
+ We load the content of the items - in Polish and in English.
+ 
+```{r}
+items =  read.table ("./input/items.tsv", header = T, sep = "\t")
+```
 
 ## Load data
 
