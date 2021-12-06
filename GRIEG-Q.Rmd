@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(knitr)
 library(dplyr)
 library(psych)
+library(doBy)
 library(EFA.dimensions)
 ```
 ## Load items
@@ -227,9 +228,34 @@ rotated = rotated$pattern
 
 And finally, we clean the output with a chosen threshold. This step is only done to facilitate the decision process.
 
+``` {r, echo=FALSE}
+#rotated = ifelse(abs(rotated) > 0.4, rotated, '')
+#kable(rotated)
+```
+
 ``` {r}
-rotated = ifelse(abs(rotated)<0.4, '', rotated)
-kable(rotated)
+thresholded = matrix(, nrow = nrow(rotated), ncol = ncol(rotated))
+colnames(thresholded) = colnames(rotated)
+rownames(thresholded) = rownames(rotated)
+
+for (i in 1:nrow(rotated)) {
+  
+  tmp = unname(rotated[i,])
+  
+  idx = which.maxn(abs(tmp), n = 2)
+  max1 = idx[1]
+  max2 = idx[2]
+  
+  criterion1 = abs(tmp[max1]) > 0.4
+  criterion2 = ( abs(tmp[max1]) - abs(tmp[max2]) ) > 0.2
+  
+  test = rep(FALSE, length(tmp))
+  test[max1] = criterion1 & criterion2
+  
+  thresholded[i,] = ifelse(test, tmp, '')
+}
+
+kable(thresholded)
 ```
 
 ``` {r}
