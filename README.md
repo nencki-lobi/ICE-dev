@@ -12,4 +12,4 @@ To render the `.html` document, just open the `.Rmd` script in R Studio and use 
 
 ## Requirements
 
-The following R packages are required: `knitr`, `dplyr`, `psych`, `doBy`, `EFA.dimensions`.
+The following R packages are required: `knitr`, `dplyr`, `psych`, `doBy`, `EFA.dimensions`, `stringr`.

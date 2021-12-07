@@ -20,6 +20,7 @@ library(EFA.dimensions)
  We load the content of the items - in Polish and in English.
  
 ```{r}
+setwd("F:/projekty/Grieg/GRIEG-Q")
 items =  read.table ("./input/items.tsv", header = T, sep = "\t", encoding="UTF-8")
 ```
 
@@ -212,22 +213,41 @@ for (i in 1:length(EMOTIONS)) {
 
 ## Exploratory factor analysis (EFA) {.tabset}
 
-First, we need to decide on the number of factors to extract. We use `RAWPAR`, that is parallel analysis of eigenvalues ([Horn, 1965](https://link.springer.com/article/10.1007/BF02289447)).
+First we need a correlation matrix for further steps
+``` {r}
+cor_matrix = POLYCHORIC_R(dataset, method = "Fox", verbose = F)
+
+```
+
+We need to decide on the number of factors to extract. We use `RAWPAR`, that is parallel analysis of eigenvalues ([Horn, 1965](https://link.springer.com/article/10.1007/BF02289447)).
 
 The parallel analysis procedure for deciding on the number of components or factors involves extracting eigenvalues from random data sets that parallel the actual data set with regard to the number of cases and variables. For example, if the original data set consists of 620 observations for each of 171 variables, then a series of random data matrices of this size (620 by 171) would be generated, and eigenvalues would be computed for the correlation matrices for the original, real data and for each of the random data sets. The eigenvalues derived from the actual data are then compared to the eigenvalues derived from the random data.  In Horn's original description of this procedure, the mean eigenvalues from the random data served as the comparison baseline, whereas the more common current practice is to use the eigenvalues that correspond to the desired percentile (typically the 95th) of the distribution of random data eigenvalues. Factors or components are retained as long as the ith eigenvalue from the actual data is greater than the ith eigenvalue from the random data.
+
+For the final report we should use Ndatasets = 10000
 
 **NOTE:** We use `polychoric` correlations!
 
 ``` {r}
-#RAWPAR(dataset, randtype = "permuted", Ndatasets=1000, factormodel="PCA", percentile=95, corkind="polychoric", corkindRAND="polychoric", verbose=T)
+library(EFA.dimensions)
+RAWPAR(cor_matrix, randtype = "permuted", Ndatasets=1000, factormodel="PCA", percentile=95, corkindRAND="polychoric", verbose=T, Ncases = nrow(dataset))
 ```
 
-We can now proceed to the exploratory factor analysis (EFA). We assume the number of factors to extract based on the result of the `RAWPAR` analysis.
+Before we proceed with EFA we calculate the Bartlett test and KMO test.
+
+``` {r}
+cortest.bartlett(cor_matrix,n=200)
+
+KMO(cor_matrix)
+
+```
+
+Tests confirmed that our data are suitable for EFA. We can now proceed to the exploratory factor analysis (EFA). We assume the number of factors to extract based on the result of the `RAWPAR` analysis.
 
 **NOTE:** We use `polychoric` correlations!
 
+
 ``` {r, message = FALSE, results = 'hide'}
-PA = PA_FA(dataset, corkind="polychoric", Nfactors=6, iterpaf=250, rotate="none", verbose=T)
+PA = PA_FA(cor_matrix, Nfactors=6, iterpaf=250, rotate="none", verbose=T)
 ```
 
 Next, we perform factor rotation in a separate step.
