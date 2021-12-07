@@ -15,18 +15,18 @@ library(psych)
 library(doBy)
 library(EFA.dimensions)
 ```
+
 ## Load items
 
- We load the content of the items - in Polish and in English.
+Before we start, let's load the content of the questionnaire items. The `items.tsv` file contains unique item codes, as well as item text in Polish and English.
  
 ```{r}
-setwd("F:/projekty/Grieg/GRIEG-Q")
 items =  read.table ("./input/items.tsv", header = T, sep = "\t", encoding="UTF-8")
 ```
 
 ## Load data
 
-We start by loading the input data. We have data from three surveys (`survey176496`, `survey381735`, and `survey977613`), each with (almost) identical structure (number of columns differ, names of some of the columns differ).
+We start by loading the input data. We have data from three surveys (`survey176496`, `survey381735`, and `survey977613`), each with (almost) identical structure (number of columns differ, names of some of the columns differ). Input data files contain demographical data of participants and answers to questionnaire items.
 
 ```{r}
 input1 = read.table ("./input/176496/results-survey176496.csv", header = T, sep = ",", encoding="UTF-8")
@@ -131,7 +131,7 @@ BLOCK13 = select(dataset, contains('BLOCK13.') & !contains("CHECK"))
 BLOCK14 = select(dataset, contains('BLOCK14.') & !contains("CHECK"))
 ```
 
-Next, for each block separately we identify "good" participants, that is participants with nonzero variance. This results with 14 lists of indicies that represent good participants in each block.
+Next, for each block separately we identify "good" participants, that is participants with nonzero variance of answers. This results with 14 lists of indices that represent good participants in each block.
 
 ``` {r}
 BLOCKS = list(BLOCK1, BLOCK2, BLOCK3, BLOCK4, BLOCK5, BLOCK6, BLOCK7, BLOCK8, BLOCK9, BLOCK10, BLOCK11, BLOCK12, BLOCK13, BLOCK14)
@@ -258,7 +258,7 @@ rotated = PROMAX(loadings, ppower=4, verbose=T)
 rotated = rotated$pattern
 ```
 
-And finally, we clean the output with a chosen threshold. This step is only done to facilitate the decision process.
+And finally, we clean the output with a chosen threshold. This step is only done to facilitate the decision process. 
 
 ``` {r, echo=FALSE}
 #rotated = ifelse(abs(rotated) > 0.4, rotated, NA)
@@ -278,14 +278,31 @@ for (i in 1:nrow(rotated)) {
   max1 = idx[1]
   max2 = idx[2]
   
-  criterion1 = abs(tmp[max1]) > 0.4
-  criterion2 = ( abs(tmp[max1]) - abs(tmp[max2]) ) > 0.2
+  criterion1 = abs(tmp[max1]) > 0.5
+  criterion2 = ( abs(tmp[max1]) - abs(tmp[max2]) ) > 0.3
   
   test = rep(FALSE, length(tmp))
   test[max1] = criterion1 & criterion2
   
   thresholded[i,] = ifelse(test, tmp, NA)
 }
+```
+
+In order to make decision on which items should be used in the questionnaire, we need to test how many items end up loading each factor at different arbitrarily set thresholds in the criteria above. Each factor should constitute a subscale with a similar, small number of items with highest loadings.
+
+```{r}
+subscale_lenght <-matrix(nrow=1, ncol=ncol(thresholded))
+colnames(subscale_lenght)=colnames(thresholded)
+rownames(subscale_lenght)= "no of items"
+for (i in 1:ncol(thresholded)) {
+subscale_lenght[1,i] = sum(!is.na(thresholded[,i]))
+}
+```
+
+The output matrix shows the number of items in each subscale. Modify criterion1 and criterion2 to test how the number of item changes with different critieria.
+
+```{r}
+kable(subscale_lenght)
 ```
 
 Use the tabs below to switch between thresholded and unthresholded factor loadings.
