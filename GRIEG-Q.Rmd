@@ -72,6 +72,12 @@ dataset = rbind(dataset1[,14:184], dataset2[,14:184], dataset3[,13:183])
 dataset = data.frame(dataset)
 ```
 
+### Getting rid of extra spaces 
+```{r}
+library(stringr)
+
+dataset = as.data.frame(apply(dataset,2,str_trim))
+```
 ## Convert data
 
 Initially, the imported data is in `char` format. We need to use a format more suitable for the analysis (either `factor` or `int`):
@@ -89,9 +95,7 @@ Initially, the imported data is in `char` format. We need to use a format more s
 
 # recode to `int` (numeric
 
-library(stringr)
 
-dataset = as.data.frame(apply(dataset,2,str_trim))
 
 dataset = dataset %>%
   mutate_at(vars(1:171),
