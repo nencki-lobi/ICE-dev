@@ -14,19 +14,22 @@ library(dplyr)
 library(psych)
 library(doBy)
 library(EFA.dimensions)
+library(stringr)
 ```
 
-## Load items
+## Preparatory steps
 
-Before we start, let's load the content of the questionnaire items. The `items.tsv` file contains unique item codes, as well as item text in Polish and English.
+### Load items
+
+We load the `items.tsv` file, which stores the information on the content of the questionnaire items. The file contains unique item codes, as well as item text in Polish and English.
  
 ```{r}
 items =  read.table ("./input/items.tsv", header = T, sep = "\t", encoding="UTF-8")
 ```
 
-## Load data
+### Load data
 
-We start by loading the input data. We have data from three surveys (`survey176496`, `survey381735`, and `survey977613`), each with (almost) identical structure (number of columns differ, names of some of the columns differ). Input data files contain demographical data of participants and answers to questionnaire items.
+We load the input data from three surveys (`survey176496`, `survey381735`, and `survey977613`). The structure of each file is (almost) identical (number of columns differ, names of some of the columns differ). The files contain demographical data of participants, as well as responses to questionnaire items.
 
 ```{r}
 input1 = read.table ("./input/176496/results-survey176496.csv", header = T, sep = ",", encoding="UTF-8")
@@ -36,14 +39,14 @@ input3 = read.table ("./input/977613/results-survey977613.csv", header = T, sep 
 
 `survey176496` and `survey381735` contain data from the general population (recruited by professional recruitment company), and `survey977613` contains data from climate activists (recruited via social media). 
 
-## Filter data
+### Clean data based on quality check criteria
 
-Moreover, we want to filter the data based on previously performed quality check analysis. In this analysis we used the following criteria:
+We clean the data based on previously performed quality check analysis. In this analysis we used the following criteria:
 
 * consistent reporting of demographic data (sex, age)
 * correct responses to 2 out of 3 control questions
 
-As this is currently implemented in other script (written in MATLAB), we will import additional `.csv` files that contain lists of valid tokens for each survey and we will use this information to filter the data.
+As this is currently implemented in other, external script (written in MATLAB), we will import additional `.csv` files that contain lists of valid tokens for each survey and we will use this information to filter the data.
 
 **NOTE:** This step is applicable only to `survey176496` and `survey381735`. Therefore, we leave `survey977613` intact. 
 
@@ -56,7 +59,7 @@ dataset2 = filter(input2,token %in% valid2$token)
 dataset3 = input3
 ```
 
-## Combine data
+### Combine data
 
 Next, we need to combine the datasets.
 
@@ -66,22 +69,23 @@ We are only interested in keeping columns that contain relevant data (questionna
 colnames(dataset1[,14:184])
 ```
 
-Therefore, we combine the datasets keeping only relevant columns. Also, let's convert the final dataset to `dataframe` for convenience.
+Therefore, we combine the datasets keeping only relevant columns.
 
 ```{r}
 dataset = rbind(dataset1[,14:184], dataset2[,14:184], dataset3[,13:183])
-dataset = data.frame(dataset)
 ```
 
-### Getting rid of extra spaces 
-```{r}
-library(stringr)
+### Convert data
 
+Next, we need to recode the data to a format more suitable for the analysis.
+
+First, we need to remove any whitespaces present in the data.
+
+```{r}
 dataset = as.data.frame(apply(dataset,2,str_trim))
 ```
-## Convert data
 
-Initially, the imported data is in `char` format. We need to use a format more suitable for the analysis (either `factor` or `int`):
+Second, the imported data is in `char` format. We need to recode it to either `factor` or `int`.
 
 ``` {r}
 # recode to `factor` (categorical):
@@ -94,10 +98,7 @@ Initially, the imported data is in `char` format. We need to use a format more s
 #                            "Raczej tak " = 4,
 #                            "Zdecydowanie tak" = 5)), ordered = TRUE)
 
-# recode to `int` (numeric
-
-
-
+# recode to `int` (numeric)
 dataset = dataset %>%
   mutate_at(vars(1:171),
             list(~recode(.,
@@ -108,11 +109,11 @@ dataset = dataset %>%
                            "Zdecydowanie tak" = 5)))
 ```
 
-## Data cleaning
+### Clean data based on variance of responses
 
-To perform additional cleaning of the data we look at the standard deviations (SDs) of participants' responses. Since items were presented in blocks, it should be most informative to investigate SDs within each block.
+Next, we clean the data based on the standard deviations (SDs) of participants' responses. Since items were presented in blocks, it should be most informative to investigate SDs within each block.
 
-Hence, we first identify items belonging to each block. Here, we discard control questions (`CHECK`), since even participants who contributed poor quality data (pol. _klikacze_) could have made the effort to respond correctly to control questions.
+Hence, we first identify items belonging to each block. Here, we discard control questions (`CHECK`), because even participants who contributed poor quality data (Polish: _klikacze_) could have made the effort to respond correctly to control questions.
 
 ``` {r}
 BLOCK1 = select(dataset, contains('BLOCK1.') & !contains("CHECK"))
@@ -131,7 +132,7 @@ BLOCK13 = select(dataset, contains('BLOCK13.') & !contains("CHECK"))
 BLOCK14 = select(dataset, contains('BLOCK14.') & !contains("CHECK"))
 ```
 
-Next, for each block separately we identify "good" participants, that is participants with nonzero variance of answers. This results with 14 lists of indices that represent good participants in each block.
+Then, for each block separately we identify "good" participants, that is participants with nonzero variance in responses. This results with 14 lists of indices that represent good participants in each block.
 
 ``` {r}
 BLOCKS = list(BLOCK1, BLOCK2, BLOCK3, BLOCK4, BLOCK5, BLOCK6, BLOCK7, BLOCK8, BLOCK9, BLOCK10, BLOCK11, BLOCK12, BLOCK13, BLOCK14)
@@ -140,7 +141,6 @@ good = NULL
 for (i in 1:length(BLOCKS)) {
   SD = apply(BLOCKS[[i]], 1, sd) # compute SD for each participant
   good[i] = list(which(SD != 0)) # find participants with nonzero variance
-  #print(length(good[[i]]))
   cat(sprintf("BLOCK%s: %s participants with nonzero variance \n", i, length(good[[i]])))
 }
 ```
@@ -211,46 +211,61 @@ for (i in 1:length(EMOTIONS)) {
 }
 ```
 
-## Exploratory factor analysis (EFA) {.tabset}
+## Exploratory factor analysis (EFA)
 
-First we need a correlation matrix for further steps
+### Correlation matrix
+
+Before we proceed to the exploratory factor analysis (EFA), we need to create a correlation matrix that will be used in subsequent steps.
+
+**NOTE:** We use `polychoric` correlations!
+
 ``` {r}
 cor_matrix = POLYCHORIC_R(dataset, method = "Fox", verbose = F)
-
 ```
 
-We need to decide on the number of factors to extract. We use `RAWPAR`, that is parallel analysis of eigenvalues ([Horn, 1965](https://link.springer.com/article/10.1007/BF02289447)).
+### Diagnostic tests
+
+Next, we run necessary diagnostic tests to make sure that our data are suitable for EFA.
+
+First, we run the **Bartlett's test**, which checks whether a correlation matrix is factorable.
+
+``` {r}
+cortest.bartlett(cor_matrix, n=200)
+```
+
+Second, we run the **Kaiser-Meyer-Olkin (KMO) test**, which provides a measure of sampling adequacy (MSA).
+
+``` {r}
+KMO(cor_matrix)
+```
+
+Both tests confirm that our data are suitable for EFA.
+
+### Decision on the number of factors
+
+Next, we need to decide on the number of factors to extract. We use `RAWPAR`, that is parallel analysis of eigenvalues ([Horn, 1965](https://link.springer.com/article/10.1007/BF02289447)).
 
 The parallel analysis procedure for deciding on the number of components or factors involves extracting eigenvalues from random data sets that parallel the actual data set with regard to the number of cases and variables. For example, if the original data set consists of 620 observations for each of 171 variables, then a series of random data matrices of this size (620 by 171) would be generated, and eigenvalues would be computed for the correlation matrices for the original, real data and for each of the random data sets. The eigenvalues derived from the actual data are then compared to the eigenvalues derived from the random data.  In Horn's original description of this procedure, the mean eigenvalues from the random data served as the comparison baseline, whereas the more common current practice is to use the eigenvalues that correspond to the desired percentile (typically the 95th) of the distribution of random data eigenvalues. Factors or components are retained as long as the ith eigenvalue from the actual data is greater than the ith eigenvalue from the random data.
 
-For the final report we should use Ndatasets = 10000
+**NOTE:** For the final report we should use `Ndatasets = 10000`.
 
 **NOTE:** We use `polychoric` correlations!
 
 ``` {r}
-library(EFA.dimensions)
-RAWPAR(cor_matrix, randtype = "permuted", Ndatasets=1000, factormodel="PCA", percentile=95, corkindRAND="polychoric", verbose=T, Ncases = nrow(dataset))
+#RAWPAR(cor_matrix, randtype = "permuted", Ndatasets=1000, factormodel="PCA", percentile=95, corkindRAND="polychoric", verbose=T, Ncases=nrow(dataset))
 ```
 
-Before we proceed with EFA we calculate the Bartlett test and KMO test.
+### Factor analysis
 
-``` {r}
-cortest.bartlett(cor_matrix,n=200)
-
-KMO(cor_matrix)
-
-```
-
-Tests confirmed that our data are suitable for EFA. We can now proceed to the exploratory factor analysis (EFA). We assume the number of factors to extract based on the result of the `RAWPAR` analysis.
+Finally, we can proceed to the exploratory factor analysis (EFA). We assume the number of factors to extract based on the result of the `RAWPAR` analysis.
 
 **NOTE:** We use `polychoric` correlations!
-
 
 ``` {r, message = FALSE, results = 'hide'}
-PA = PA_FA(cor_matrix, Nfactors=6, iterpaf=250, rotate="none", verbose=T)
+PA = PA_FA(cor_matrix, Nfactors=6, iterpaf=250, rotate="none", verbose=T, Ncases=nrow(dataset))
 ```
 
-Next, we perform factor rotation in a separate step.
+We perform factor rotation in a separate step.
 
 ``` {r, message = FALSE, results = 'hide'}
 loadings = PA$loadingsNOROT
@@ -258,7 +273,18 @@ rotated = PROMAX(loadings, ppower=4, verbose=T)
 rotated = rotated$pattern
 ```
 
-And finally, we clean the output with a chosen threshold. This step is only done to facilitate the decision process. 
+### Thresholding {.tabset}
+
+Based on the factor loadings, we need to decide which items should be included to the final version of the questionnaire.
+
+We clean the output based on two criteria (both criteria must be met):
+
+* `criterion1`: for any item to be included to a given factor, its corresponding factor loading must be greater than a certain threshold value
+* `criterion2`: item's factor loading for this factor must be sufficiently higher than its factor loadings for the remaining factors.
+
+This step is done to facilitate the decision process.
+
+We can manipulate `criterion1` and `criterion2` in the code below, to see how many items end up loading each factor at different threshold values.
 
 ``` {r, echo=FALSE}
 #rotated = ifelse(abs(rotated) > 0.4, rotated, NA)
@@ -288,32 +314,29 @@ for (i in 1:nrow(rotated)) {
 }
 ```
 
-In order to make decision on which items should be used in the questionnaire, we need to test how many items end up loading each factor at different arbitrarily set thresholds in the criteria above. Each factor should constitute a subscale with a similar, small number of items with highest loadings.
+Assuming the above criteria, the resulting number of items in each factor is as follows:
 
 ```{r}
-subscale_lenght <-matrix(nrow=1, ncol=ncol(thresholded))
-colnames(subscale_lenght)=colnames(thresholded)
-rownames(subscale_lenght)= "no of items"
+nitems = matrix(nrow = 1, ncol = ncol(thresholded))
+colnames(nitems) = colnames(thresholded)
+rownames(nitems) = "Number of items"
+
 for (i in 1:ncol(thresholded)) {
-subscale_lenght[1,i] = sum(!is.na(thresholded[,i]))
+  nitems[1,i] = sum(!is.na(thresholded[,i]))
 }
+
+kable(nitems)
 ```
 
-The output matrix shows the number of items in each subscale. Modify criterion1 and criterion2 to test how the number of item changes with different critieria.
+The table below displays the factor loadings that passed the above criteria. Use the tabs below to switch between thresholded and unthresholded views.
 
-```{r}
-kable(subscale_lenght)
-```
-
-Use the tabs below to switch between thresholded and unthresholded factor loadings.
-
-### Thresholded
+#### Thresholded
 
 ``` {r}
 kable(thresholded, digits = 2)
 ```
 
-### Unthresholded
+#### Unthresholded
 
 ``` {r}
 kable(rotated, digits = 2)
