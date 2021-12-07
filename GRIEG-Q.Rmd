@@ -20,7 +20,7 @@ library(EFA.dimensions)
  We load the content of the items - in Polish and in English.
  
 ```{r}
-items =  read.table ("./input/items.tsv", header = T, sep = "\t", encoding="UTF-8")
+items =  read.table ("./input/items.tsv", header = T, sep = "\t")
 ```
 
 ## Load data
@@ -28,9 +28,9 @@ items =  read.table ("./input/items.tsv", header = T, sep = "\t", encoding="UTF-
 We start by loading the input data. We have data from three surveys (`survey176496`, `survey381735`, and `survey977613`), each with (almost) identical structure (number of columns differ, names of some of the columns differ).
 
 ```{r}
-input1 = read.table ("./input/176496/results-survey176496.csv", header = T, sep = ",", encoding="UTF-8")
-input2 = read.table ("./input/381735/results-survey381735.csv", header = T, sep = ",", encoding="UTF-8")
-input3 = read.table ("./input/977613/results-survey977613.csv", header = T, sep = ",", encoding="UTF-8")
+input1 = read.table ("./input/176496/results-survey176496.csv", header = T, sep = ",")
+input2 = read.table ("./input/381735/results-survey381735.csv", header = T, sep = ",")
+input3 = read.table ("./input/977613/results-survey977613.csv", header = T, sep = ",")
 ```
 
 `survey176496` and `survey381735` contain data from the general population (recruited by professional recruitment company), and `survey977613` contains data from climate activists (recruited via social media). 
@@ -47,8 +47,8 @@ As this is currently implemented in other script (written in MATLAB), we will im
 **NOTE:** This step is applicable only to `survey176496` and `survey381735`. Therefore, we leave `survey977613` intact. 
 
 ```{r}
-valid1 = read.table ("./input/176496/valid.csv", header = T, sep = "\t", encoding="UTF-8")
-valid2 = read.table ("./input/381735/valid.csv", header = T, sep = "\t", encoding="UTF-8")
+valid1 = read.table ("./input/176496/valid.csv", header = T, sep = "\t")
+valid2 = read.table ("./input/381735/valid.csv", header = T, sep = "\t")
 
 dataset1 = filter(input1,token %in% valid1$token)
 dataset2 = filter(input2,token %in% valid2$token)
@@ -87,19 +87,14 @@ Initially, the imported data is in `char` format. We need to use a format more s
 #                            "Raczej tak " = 4,
 #                            "Zdecydowanie tak" = 5)), ordered = TRUE)
 
-# recode to `int` (numeric
-
-library(stringr)
-
-dataset = as.data.frame(apply(dataset,2,str_trim))
-
+# recode to `int` (numeric):
 dataset = dataset %>%
   mutate_at(vars(1:171),
             list(~recode(.,
                            "Zdecydowanie nie" = 1,
-                           "Raczej nie" = 2,
+                           "Raczej nie " = 2,
                            "Ani tak, ani nie" = 3,
-                           "Raczej tak" = 4,
+                           "Raczej tak " = 4,
                            "Zdecydowanie tak" = 5)))
 ```
 
