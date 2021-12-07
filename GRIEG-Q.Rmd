@@ -157,6 +157,36 @@ We can now clean the dataset:
 dataset = dataset[allgood,]
 ```
 
+### Organize item information
+
+Furthermore, we create three additional variables, which we will later use to extract relevant information about the items. 
+
+`code_to_pl` returns the item's original text in Polish.
+
+```{r}
+code_to_pl = items$subquestion
+names(code_to_pl) = items$code
+```
+
+`code_to_en` returns the item's text translated into English.
+
+```{r}
+code_to_en = items$subquestion_ENG
+names(code_to_en) = items$code
+```
+
+`code_to_block` returns the number of the block, in which the given item was displayed.
+
+```{r}
+code_messy = colnames(dataset)
+code_splitted = strsplit(code_messy, ".", fixed = TRUE)
+code_flattened = as.data.frame(do.call(rbind, code_splitted))
+colnames(code_flattened) = c("block","code")
+
+code_to_block = code_flattened$block
+names(code_to_block) = code_flattened$code
+```
+
 ## Reliability analysis {.tabset}
 
 We want to identify items that best represent a given emotion construct (e.g. anger). Specifically, for each item we want to assess how well it correlates with all the other items representing the same emotion construct. 
