@@ -17,6 +17,10 @@ library(EFA.dimensions)
 library(stringr)
 ```
 
+```{r, include=FALSE}
+set.seed(2137) # set seed for replicability
+```
+
 ## Preparatory steps
 
 ### Load items
