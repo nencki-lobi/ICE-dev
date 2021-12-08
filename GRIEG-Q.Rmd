@@ -193,60 +193,6 @@ names(code_to_block) = code_flattened$code
 colnames(dataset) = names(code_to_block)
 ```
 
-## Reliability analysis {.tabset}
-
-We want to identify items that best represent a given emotion construct (e.g. anger). Specifically, for each item we want to assess how well it correlates with all the other items representing the same emotion construct. 
-
-Thus, we first need to split the data according to emotions.
-
-``` {r}
-ANG = select(dataset,contains('ANG')) # Anger
-APP = select(dataset,contains('APP')) # Apprehension
-EMP = select(dataset,contains('EMP')) # Empowerment
-GUI = select(dataset,contains('GUI')) # Guilt
-HOPF = select(dataset,contains('HOPF')) # Hopefulness
-HOPL = select(dataset,contains('HOPL')) # Hopelessness
-IRR = select(dataset,contains('IRR')) # Irritation
-ISO = select(dataset,contains('ISO')) # Isolation
-POWL = select(dataset,contains('POWL')) # Powerlessness
-SOR = select(dataset,contains('SOR')) # Sorrow
-
-DIS = select(dataset,contains('DIS')) # Discontent
-IND = select(dataset,contains('IND')) # Indifference
-```
-
-We assess the reliability, by calculating Cronbach's alpha for each emotion separately. Use the tabs below to switch between the results for each emotion.
-
-``` {r, results='asis'}
-EMOTIONS = list(ANG, APP, EMP, GUI, HOPF, HOPL, IRR, ISO, POWL, SOR, DIS, IND)
-labels = list("Anger", "Apprehension", "Empowerment", "Guilt",
-              "Hopefulness", "Hopelessness", "Irritation", "Isolation",
-              "Powerlessness", "Sorrow", "Discontent", "Indifference")
-
-for (i in 1:length(EMOTIONS)) {
-  
-  out = alpha(EMOTIONS[[i]]) # Cronbach's alpha
-  
-  cat("\n")
-  cat(sprintf("### %s \n", labels[[i]]))
-  cat("\n")
-  
-  cat(sprintf("\n Reliability analysis:"))
-  print(kable(out$total, digits = 2))
-  
-  cat(sprintf("\n Reliability if an item is dropped:"))
-  print(kable(out$alpha.drop, digits = 2))
-  
-  cat(sprintf("\n Item statistics:"))
-  print(kable(out$item.stats, digits = 2))
-  
-  cat(sprintf("\n Non missing response frequency for each item:"))
-  print(kable(out$response.freq, digits = 2))
-  
-  cat("\n")
-}
-```
-
 ## Exploratory factor analysis (EFA)
 
 ### Correlation matrix
@@ -432,6 +378,51 @@ for (i in 1:length(factor_en)) {
   
   print(kable(factor_en[[i]]))
   
+  cat("\n")
+}
+```
+
+## Reliability analysis {.tabset}
+
+TBA
+
+``` {r}
+FACTORS = NULL
+
+for (i in 1:length(factor_pl)) {
+  fcodes = rownames(factor_pl[[i]])
+  out = dataset[,fcodes]
+  
+  FACTORS[i] = list(out)
+}
+```
+
+We assess the reliability, by calculating Cronbach's alpha for each factor separately. Use the tabs below to switch between the results for each factor
+
+``` {r, results='asis'}
+labels = list("Factor1", "Factor2", "Factor3",
+              "Factor4", "Factor5", "Factor6")
+
+for (i in 1:length(FACTORS)) {
+
+  out = alpha(FACTORS[[i]]) # Cronbach's alpha
+
+  cat("\n")
+  cat(sprintf("### %s \n", labels[[i]]))
+  cat("\n")
+
+  cat(sprintf("\n Reliability analysis:"))
+  print(kable(out$total, digits = 2))
+
+  cat(sprintf("\n Reliability if an item is dropped:"))
+  print(kable(out$alpha.drop, digits = 2))
+
+  cat(sprintf("\n Item statistics:"))
+  print(kable(out$item.stats, digits = 2))
+
+  cat(sprintf("\n Non missing response frequency for each item:"))
+  print(kable(out$response.freq, digits = 2))
+
   cat("\n")
 }
 ```
