@@ -187,6 +187,12 @@ code_to_block = code_flattened$block
 names(code_to_block) = code_flattened$code
 ```
 
+### Change item codes
+
+```{r}
+colnames(dataset) = names(code_to_block)
+```
+
 ## Reliability analysis {.tabset}
 
 We want to identify items that best represent a given emotion construct (e.g. anger). Specifically, for each item we want to assess how well it correlates with all the other items representing the same emotion construct. 
@@ -194,19 +200,19 @@ We want to identify items that best represent a given emotion construct (e.g. an
 Thus, we first need to split the data according to emotions.
 
 ``` {r}
-ANG = select(dataset,contains('.ANG')) # Anger
-APP = select(dataset,contains('.APP')) # Apprehension
-EMP = select(dataset,contains('.EMP')) # Empowerment
-GUI = select(dataset,contains('.GUI')) # Guilt
-HOPF = select(dataset,contains('.HOPF')) # Hopefulness
-HOPL = select(dataset,contains('.HOPL')) # Hopelessness
-IRR = select(dataset,contains('.IRR')) # Irritation
-ISO = select(dataset,contains('.ISO')) # Isolation
-POWL = select(dataset,contains('.POWL')) # Powerlessness
-SOR = select(dataset,contains('.SOR')) # Sorrow
+ANG = select(dataset,contains('ANG')) # Anger
+APP = select(dataset,contains('APP')) # Apprehension
+EMP = select(dataset,contains('EMP')) # Empowerment
+GUI = select(dataset,contains('GUI')) # Guilt
+HOPF = select(dataset,contains('HOPF')) # Hopefulness
+HOPL = select(dataset,contains('HOPL')) # Hopelessness
+IRR = select(dataset,contains('IRR')) # Irritation
+ISO = select(dataset,contains('ISO')) # Isolation
+POWL = select(dataset,contains('POWL')) # Powerlessness
+SOR = select(dataset,contains('SOR')) # Sorrow
 
-DIS = select(dataset,contains('.DIS')) # Discontent
-IND = select(dataset,contains('.IND')) # Indifference
+DIS = select(dataset,contains('DIS')) # Discontent
+IND = select(dataset,contains('IND')) # Indifference
 ```
 
 We assess the reliability, by calculating Cronbach's alpha for each emotion separately. Use the tabs below to switch between the results for each emotion.
@@ -370,6 +376,64 @@ kable(thresholded, digits = 2)
 
 ``` {r}
 kable(rotated, digits = 2)
+```
+
+### Generate item lists for each factor in PL {.tabset}
+
+``` {r}
+factor_pl = NULL
+
+for (i in 1:ncol(thresholded)) {
+  idx_of_loading_items = !is.na(thresholded[,i])
+  codes_of_loading_items=rownames(thresholded)[idx_of_loading_items]
+  out = code_to_pl[codes_of_loading_items]
+  out=as.data.frame(out)
+  colnames(out) = "Item text"
+  
+  factor_pl[i] = list(out)
+}
+```
+
+``` {r, results='asis', echo=FALSE}
+for (i in 1:length(factor_pl)) {
+  
+  cat("\n")
+  cat(sprintf("#### Factor %s \n", i))
+  cat("\n")
+  
+  print(kable(factor_pl[[i]]))
+  
+  cat("\n")
+}
+```
+
+### Generate item lists for each factor in EN {.tabset}
+
+``` {r}
+factor_en = NULL
+
+for (i in 1:ncol(thresholded)) {
+  idx_of_loading_items = !is.na(thresholded[,i])
+  codes_of_loading_items=rownames(thresholded)[idx_of_loading_items]
+  out = code_to_pl[codes_of_loading_items]
+  out=as.data.frame(out)
+  colnames(out) = "Item text"
+  
+  factor_en[i] = list(out)
+}
+```
+
+``` {r, results='asis', echo=FALSE}
+for (i in 1:length(factor_en)) {
+  
+  cat("\n")
+  cat(sprintf("#### Factor %s \n", i))
+  cat("\n")
+  
+  print(kable(factor_en[[i]]))
+  
+  cat("\n")
+}
 ```
 
 ``` {r}
