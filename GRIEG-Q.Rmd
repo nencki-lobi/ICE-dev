@@ -187,7 +187,9 @@ code_to_block = code_flattened$block
 names(code_to_block) = code_flattened$code
 ```
 
-### Change item codes
+### Simplify item codes
+
+This step is used to simplify the item codes in the final dataset (e.g. `SOR11` instead of `BLOCK1.SOR11.`).
 
 ```{r}
 colnames(dataset) = names(code_to_block)
@@ -324,7 +326,9 @@ kable(thresholded, digits = 2)
 kable(rotated, digits = 2)
 ```
 
-### Generate item lists for each factor in PL {.tabset}
+### Item lists in Polish {.tabset}
+
+Items (item codes + item texts in Polish) that passed the above criteria are listed below. Use the tabs to view items for different factors.
 
 ``` {r}
 factor_pl = NULL
@@ -353,7 +357,9 @@ for (i in 1:length(factor_pl)) {
 }
 ```
 
-### Generate item lists for each factor in EN {.tabset}
+### Item lists in English {.tabset}
+
+Items (item codes + item texts in English) that passed the above criteria are listed below. Use the tabs to view items for different factors.
 
 ``` {r}
 factor_en = NULL
@@ -361,7 +367,7 @@ factor_en = NULL
 for (i in 1:ncol(thresholded)) {
   idx_of_loading_items = !is.na(thresholded[,i])
   codes_of_loading_items=rownames(thresholded)[idx_of_loading_items]
-  out = code_to_pl[codes_of_loading_items]
+  out = code_to_en[codes_of_loading_items]
   out=as.data.frame(out)
   colnames(out) = "Item text"
   
@@ -384,7 +390,9 @@ for (i in 1:length(factor_en)) {
 
 ## Reliability analysis {.tabset}
 
-TBA
+We want to identify items that best represent each factor. Specifically, for each item we want to assess how well it correlates with all the other items representing the same factor.
+
+Thus, we first need to split the data according to factors.
 
 ``` {r}
 FACTORS = NULL
@@ -397,7 +405,7 @@ for (i in 1:length(factor_pl)) {
 }
 ```
 
-We assess the reliability, by calculating Cronbach's alpha for each factor separately. Use the tabs below to switch between the results for each factor
+We assess the reliability by calculating Cronbach's alpha for each factor separately. Use the tabs below to switch between the results for each factor
 
 ``` {r, results='asis'}
 labels = list("Factor1", "Factor2", "Factor3",
