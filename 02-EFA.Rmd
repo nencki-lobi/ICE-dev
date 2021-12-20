@@ -1,0 +1,228 @@
+## 02. Exploratory factor analysis (EFA)
+
+```{r, include=FALSE}
+set.seed(2137) # set seed for replicability
+```
+
+### Load inputs
+
+We load inputs required for the analysis: the preprocessed dataset, together with some helper variables (`code_to_pl`, `code_to_en`).
+
+``` {r}
+load("./01/output/dataset.RData")
+```
+
+### Correlation matrix
+
+First, we create a correlation matrix that will be used in subsequent steps.
+
+**NOTE:** We use `polychoric` correlations!
+
+``` {r}
+cor_matrix = POLYCHORIC_R(dataset, method = "Fox", verbose = F)
+```
+
+### Diagnostic tests
+
+Next, we run necessary diagnostic tests to make sure that our data are suitable for EFA.
+
+First, we run the **Bartlett's test**, which checks whether a correlation matrix is factorable.
+
+``` {r}
+cortest.bartlett(cor_matrix, n=200)
+```
+
+Second, we run the **Kaiser-Meyer-Olkin (KMO) test**, which provides a measure of sampling adequacy (MSA).
+
+``` {r}
+KMO(cor_matrix)
+```
+
+Both tests confirm that our data are suitable for EFA.
+
+### Decision on the number of factors
+
+Next, we need to decide on the number of factors to extract. We use `RAWPAR`, that is parallel analysis of eigenvalues ([Horn, 1965](https://link.springer.com/article/10.1007/BF02289447)).
+
+The parallel analysis procedure for deciding on the number of components or factors involves extracting eigenvalues from random data sets that parallel the actual data set with regard to the number of cases and variables. For example, if the original data set consists of 620 observations for each of 171 variables, then a series of random data matrices of this size (620 by 171) would be generated, and eigenvalues would be computed for the correlation matrices for the original, real data and for each of the random data sets. The eigenvalues derived from the actual data are then compared to the eigenvalues derived from the random data.  In Horn's original description of this procedure, the mean eigenvalues from the random data served as the comparison baseline, whereas the more common current practice is to use the eigenvalues that correspond to the desired percentile (typically the 95th) of the distribution of random data eigenvalues. Factors or components are retained as long as the ith eigenvalue from the actual data is greater than the ith eigenvalue from the random data.
+
+**NOTE:** For the final report we should use `Ndatasets = 10000`.
+
+**NOTE:** We use `polychoric` correlations!
+
+``` {r}
+#RAWPAR(cor_matrix, randtype = "permuted", Ndatasets=1000, factormodel="PCA", percentile=95, corkindRAND="polychoric", verbose=T, Ncases=nrow(dataset))
+```
+
+### Factor analysis
+
+Finally, we can proceed to the exploratory factor analysis (EFA). We assume the number of factors to extract based on the result of the `RAWPAR` analysis.
+
+**NOTE:** We use `polychoric` correlations!
+
+``` {r, message = FALSE, results = 'hide'}
+PA = PA_FA(cor_matrix, Nfactors=7, iterpaf=250, rotate="none", verbose=T, Ncases=nrow(dataset))
+```
+
+We perform factor rotation in a separate step.
+
+``` {r, message = FALSE, results = 'hide'}
+loadings = PA$loadingsNOROT
+rotated = PROMAX(loadings, ppower=4, verbose=T)
+rotated = rotated$pattern
+```
+
+### Thresholding {.tabset}
+
+Based on the factor loadings, we need to decide which items should be included to the final version of the questionnaire.
+
+We clean the output based on two criteria (both criteria must be met):
+
+* `criterion1`: for any item to be included to a given factor, its corresponding factor loading must be greater than a certain threshold value
+* `criterion2`: item's factor loading for this factor must be sufficiently higher than its factor loadings for the remaining factors.
+
+This step is done to facilitate the decision process.
+
+We can manipulate `criterion1` and `criterion2` in the code below, to see how many items end up loading each factor at different threshold values.
+
+``` {r}
+thresholded = matrix(, nrow = nrow(rotated), ncol = ncol(rotated))
+colnames(thresholded) = colnames(rotated)
+rownames(thresholded) = rownames(rotated)
+
+for (i in 1:nrow(rotated)) {
+  
+  tmp = unname(rotated[i,])
+  
+  idx = which.maxn(abs(tmp), n = 2)
+  max1 = idx[1]
+  max2 = idx[2]
+  
+  criterion1 = abs(tmp[max1]) > 0.5
+  criterion2 = ( abs(tmp[max1]) - abs(tmp[max2]) ) > 0.3
+  
+  test = rep(FALSE, length(tmp))
+  test[max1] = criterion1 & criterion2
+  
+  thresholded[i,] = ifelse(test, tmp, NA)
+}
+```
+
+Assuming the above criteria, the resulting number of items in each factor is as follows:
+
+```{r}
+nitems = matrix(nrow = 1, ncol = ncol(thresholded))
+colnames(nitems) = colnames(thresholded)
+rownames(nitems) = "Number of items"
+
+for (i in 1:ncol(thresholded)) {
+  nitems[1,i] = sum(!is.na(thresholded[,i]))
+}
+
+kable(nitems)
+```
+
+The table below displays the factor loadings that passed the above criteria. Use the tabs below to switch between thresholded and unthresholded views.
+
+#### Thresholded
+
+``` {r}
+kable(thresholded, digits = 2)
+```
+
+#### Unthresholded
+
+``` {r}
+kable(rotated, digits = 2)
+```
+
+### Lists of best loading items in Polish {.tabset}
+
+Items (item codes + item texts in Polish) that passed the above criteria are listed below. Use the tabs to view items for different factors.
+
+``` {r, echo=FALSE}
+factor_pl = NULL
+
+for (i in 1:ncol(thresholded)) {
+  idx_of_loading_items = !is.na(thresholded[,i])
+  codes_of_loading_items = rownames(thresholded)[idx_of_loading_items]
+  out = code_to_pl[codes_of_loading_items]
+  out = as.data.frame(out)
+  colnames(out) = "Best items"
+
+  factor_pl[i] = list(out)
+}
+```
+
+``` {r, results='asis', echo=FALSE}
+for (i in 1:length(factor_pl)) {
+
+  cat("\n")
+  cat(sprintf("#### Factor %s \n", i))
+  cat("\n")
+
+  print(kable(factor_pl[[i]]))
+
+  cat("\n")
+}
+```
+
+### Lists of best loading items in English {.tabset}
+
+Items (item codes + item texts in English) that passed the above criteria are listed below. Use the tabs to view items for different factors.
+
+``` {r, echo=FALSE}
+factor_en = NULL
+
+for (i in 1:ncol(thresholded)) {
+  idx_of_loading_items = !is.na(thresholded[,i])
+  codes_of_loading_items = rownames(thresholded)[idx_of_loading_items]
+  out = code_to_en[codes_of_loading_items]
+  out = as.data.frame(out)
+  colnames(out) = "Best items"
+
+  factor_en[i] = list(out)
+}
+```
+
+``` {r, results='asis', echo=FALSE}
+for (i in 1:length(factor_en)) {
+
+  cat("\n")
+  cat(sprintf("#### Factor %s \n", i))
+  cat("\n")
+
+  print(kable(factor_en[[i]]))
+
+  cat("\n")
+}
+```
+
+### Prepare outputs
+
+``` {r}
+output = data.frame(matrix(ncol = 5, nrow = 0))
+
+for (i in 1:length(factor_pl)) {
+  fcodes = rownames(factor_pl[[i]])
+  
+  col1 = as.character(rep(i,length(fcodes)))
+  col2 = as.character(fcodes)
+  col3 = as.character(code_to_pl[fcodes])
+  col4 = as.character(code_to_en[fcodes])
+  col5 = as.character(lapply(thresholded[fcodes,i], round, 2))
+
+  out = as.data.frame(cbind(col1, col2, col3, col4, col5))
+  output = rbind(output,out)
+}
+
+colnames(output) = c("FACTOR", "CODE", "ITEM TEXT", "ITEM TEXT EN",	"LOAD")
+```
+
+### Save outputs
+
+Save outputs required for further step(s).
+
+``` {r}
+write.table(output, file="./02/output/items-per-factor.tsv", row.names = F, sep='\t', fileEncoding = "UTF-8")
+```

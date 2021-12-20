@@ -1,0 +1,44 @@
+---  
+title: "GRIEG questionnaire data analysis" 
+output: 
+  html_document:
+    toc: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(knitr.kable.NA = '')
+
+library(knitr)
+library(dplyr)
+library(psych)
+library(doBy)
+library(EFA.dimensions)
+library(stringr)
+```
+
+```{r child = '01-prep.Rmd'}
+
+```
+
+```{r child = '02-EFA.Rmd'}
+
+```
+
+```{r child = '03-reliability.Rmd'}
+
+```
+
+``` {r}
+
+```
+
+## Note
+
+```{r, echo=FALSE}
+# use this block, to print output only (no r syntax)
+```
+
+Note that the `echo = FALSE` parameter was added to some of the R code chunks to prevent them from printing.

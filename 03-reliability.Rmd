@@ -1,0 +1,172 @@
+## 03. Reliability analysis
+
+```{r, include=FALSE}
+set.seed(2137) # set seed for replicability
+```
+
+### Load inputs
+
+We load inputs required for the analysis: the preprocessed dataset, together with some helper variables (`code_to_pl`, `code_to_en`).
+
+``` {r}
+load("./01/output/dataset.RData")
+```
+
+Also, we load information about which items we want to keep and which items we want to drop. This information is a result of qualitative assessment, that was performed by the team members.
+
+Specifically, we decided to retain 8 items per factor. We dropped items, that (compared to other, selected items):
+
+* `LOW` - had lower factor loading
+* `SIM` - were too similar to item that was already selected
+* `UNC` - used unclear wording and/or complex grammatical structure
+* `EMO` - were the only item representing a given emotion category in the factor (e.g. `SOR`, `IRR`).
+
+Please note, that items could be dropped due to single (e.g. `LOW`) or multiple (e.g. `LOW` and `UNC`) reasons.
+
+``` {r}
+items =  read.table ("./03/input/items-per-factor-dropouts.tsv", header = T, sep = "\t", encoding="UTF-8")
+rownames(items) = items$CODE
+
+selected = is.na(items$LOW) & is.na(items$SIM) & is.na(items$UNC) & is.na(items$EMO)
+dropped = !is.na(items$LOW) | !is.na(items$SIM) | !is.na(items$UNC) | !is.na(items$EMO)
+```
+
+### Lists of selected and dropped items in Polish {.tabset}
+
+Selected and dropped items (item codes + item texts in Polish) are listed below. Use the tabs to view items for different factors.
+
+``` {r}
+factor_pl = NULL
+nfact = max(items$FACTOR)
+
+for (i in 1:nfact) {
+  
+  idx_of_selected_items = selected & items$FACTOR == i
+  codes_of_selected_items = rownames(items)[idx_of_selected_items]
+  
+  idx_of_dropped_items = dropped & items$FACTOR == i
+  codes_of_dropped_items = rownames(items)[idx_of_dropped_items]
+  
+  out1 = code_to_pl[codes_of_selected_items]
+  out1 = as.data.frame(out1)
+  colnames(out1) = "Selected items"
+  
+  out2 = code_to_pl[codes_of_dropped_items]
+  out2 = as.data.frame(out2)
+  colnames(out2) = "Dropped items"
+  
+  out = list(out1, out2)
+  
+  factor_pl[i] = list(out)
+}
+```
+
+``` {r, results='asis', echo=FALSE}
+for (i in 1:length(factor_pl)) {
+  
+  cat("\n")
+  cat(sprintf("#### Factor %s \n", i))
+  cat("\n")
+
+  print(kable(factor_pl[[i]][[1]]))
+  
+  print(kable(factor_pl[[i]][[2]]))
+  
+  cat("\n")
+}
+```
+
+### Lists of selected and dropped items in English {.tabset}
+
+Selected and dropped items (item codes + item texts in English) are listed below. Use the tabs to view items for different factors.
+
+``` {r}
+factor_en = NULL
+nfact = max(items$FACTOR)
+
+for (i in 1:nfact) {
+  
+  idx_of_selected_items = selected & items$FACTOR == i
+  codes_of_selected_items = rownames(items)[idx_of_selected_items]
+  
+  idx_of_dropped_items = dropped & items$FACTOR == i
+  codes_of_dropped_items = rownames(items)[idx_of_dropped_items]
+  
+  out1 = code_to_en[codes_of_selected_items]
+  out1 = as.data.frame(out1)
+  colnames(out1) = "Item text"
+  
+  out2 = code_to_en[codes_of_dropped_items]
+  out2 = as.data.frame(out2)
+  colnames(out2) = "Item text"
+  
+  out = list(out1, out2)
+  
+  factor_en[i] = list(out)
+}
+```
+
+``` {r, results='asis', echo=FALSE}
+for (i in 1:length(factor_en)) {
+  
+  cat("\n")
+  cat(sprintf("#### Factor %s \n", i))
+  cat("\n")
+  
+  cat(sprintf("Selected items: \n"))
+  print(kable(factor_en[[i]][[1]]))
+  
+  cat("\n")
+  
+  cat(sprintf("Dropped items: \n"))
+  print(kable(factor_en[[i]][[2]]))
+  
+  cat("\n")
+}
+```
+
+### Cronbach's alpha {.tabset}
+
+Finally, we calculate Cronbach's alpha to assess the reliability of the questionnaire (selected items). Specifically, for each item we want to assess how well it correlates with all the other items representing the same factor.
+
+Thus, we first need to split the data according to factors.
+
+``` {r}
+FACTORS = NULL
+
+for (i in 1:length(factor_pl)) {
+  fcodes = rownames(factor_pl[[i]][[1]])
+  out = dataset[,fcodes]
+
+  FACTORS[i] = list(out)
+}
+```
+
+We assess the reliability by calculating Cronbach's alpha for each factor separately. Use the tabs below to switch between the results for each factor
+
+``` {r, results='asis'}
+labels = list("Factor1", "Factor2", "Factor3", "Factor4", "Factor5", "Factor6", "Factor7")
+
+for (i in 1:length(FACTORS)) {
+
+  out = alpha(FACTORS[[i]]) # Cronbach's alpha
+
+  cat("\n")
+  cat(sprintf("#### %s \n", labels[[i]]))
+  cat("\n")
+
+  cat(sprintf("\n Reliability analysis:"))
+  print(kable(out$total, digits = 2))
+
+  cat(sprintf("\n Reliability if an item is dropped:"))
+  print(kable(out$alpha.drop, digits = 2))
+
+  cat(sprintf("\n Item statistics:"))
+  print(kable(out$item.stats, digits = 2))
+
+  cat(sprintf("\n Non missing response frequency for each item:"))
+  print(kable(out$response.freq, digits = 2))
+
+  cat("\n")
+}
+```

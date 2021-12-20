@@ -1,0 +1,187 @@
+## 01. Preparatory steps
+
+```{r, include=FALSE}
+set.seed(2137) # set seed for replicability
+```
+
+### Load inputs
+
+We load the `items.tsv` file, which stores the information on the content of the questionnaire items. The file contains unique item codes, as well as item text in Polish and English.
+ 
+```{r}
+items =  read.table("./01/input/items.tsv", header = T, sep = "\t", encoding = "UTF-8")
+```
+
+We load the input data from three surveys (`survey176496`, `survey381735`, and `survey977613`). The structure of each file is (almost) identical (number of columns differ, names of some of the columns differ). The files contain demographical data of participants, as well as responses to questionnaire items.
+
+```{r}
+input1 = read.table("./01/input/176496/results-survey176496.csv", header = T, sep = ",", encoding = "UTF-8")
+input2 = read.table("./01/input/381735/results-survey381735.csv", header = T, sep = ",", encoding = "UTF-8")
+input3 = read.table("./01/input/977613/results-survey977613.csv", header = T, sep = ",", encoding = "UTF-8")
+```
+
+`survey176496` and `survey381735` contain data from the general population (recruited by professional recruitment company), and `survey977613` contains data from climate activists (recruited via social media). 
+
+### Clean data based on quality check criteria
+
+We clean the data based on previously performed quality check analysis. In this analysis we used the following criteria:
+
+* consistent reporting of demographic data (sex, age)
+* correct responses to 2 out of 3 control questions
+
+As this is currently implemented in other, external script (written in MATLAB), we will import additional `.csv` files that contain lists of valid tokens for each survey and we will use this information to filter the data.
+
+**NOTE:** This step is applicable only to `survey176496` and `survey381735`. Therefore, we leave `survey977613` intact. 
+
+```{r}
+valid1 = read.table("./01/input/176496/valid.csv", header = T, sep = "\t", encoding = "UTF-8")
+valid2 = read.table("./01/input/381735/valid.csv", header = T, sep = "\t", encoding = "UTF-8")
+
+dataset1 = filter(input1,token %in% valid1$token)
+dataset2 = filter(input2,token %in% valid2$token)
+dataset3 = input3
+```
+
+### Combine data
+
+Next, we need to combine the datasets.
+
+We are only interested in keeping columns that contain relevant data (questionnaire items). These data is stored in columns `14:184` in the case of `dataset1` and `dataset2`, but in columns `13:183` in the case of `dataset3`.
+
+``` {r}
+colnames(dataset1[,14:184])
+```
+
+Therefore, we combine the datasets keeping only relevant columns.
+
+```{r}
+dataset = rbind(dataset1[,14:184], dataset2[,14:184], dataset3[,13:183])
+```
+
+### Convert data
+
+Next, we need to recode the data to a format more suitable for the analysis.
+
+First, we need to remove any whitespaces present in the data.
+
+```{r}
+dataset = as.data.frame(apply(dataset,2,str_trim))
+```
+
+Second, the imported data is in `char` format. We need to recode it to either `factor` or `int`.
+
+``` {r}
+# recode to `factor` (categorical):
+# dataset = dataset %>%
+#   mutate_at(vars(1:171),
+#             ~factor(recode(.,
+#                            "Zdecydowanie nie" = 1,
+#                            "Raczej nie " = 2,
+#                            "Ani tak, ani nie" = 3,
+#                            "Raczej tak " = 4,
+#                            "Zdecydowanie tak" = 5)), ordered = TRUE)
+
+# recode to `int` (numeric)
+dataset = dataset %>%
+  mutate_at(vars(1:171),
+            list(~recode(.,
+                           "Zdecydowanie nie" = 1,
+                           "Raczej nie" = 2,
+                           "Ani tak, ani nie" = 3,
+                           "Raczej tak" = 4,
+                           "Zdecydowanie tak" = 5)))
+```
+
+### Clean data based on variance of responses
+
+Next, we clean the data based on the standard deviations (SDs) of participants' responses. Since items were presented in blocks, it should be most informative to investigate SDs within each block.
+
+Hence, we first identify items belonging to each block. Here, we discard control questions (`CHECK`), because even participants who contributed poor quality data (Polish: _klikacze_) could have made the effort to respond correctly to control questions.
+
+``` {r}
+BLOCK1 = select(dataset, contains('BLOCK1.') & !contains("CHECK"))
+BLOCK2 = select(dataset, contains('BLOCK2.') & !contains("CHECK"))
+BLOCK3 = select(dataset, contains('BLOCK3.') & !contains("CHECK"))
+BLOCK4 = select(dataset, contains('BLOCK4.') & !contains("CHECK"))
+BLOCK5 = select(dataset, contains('BLOCK5.') & !contains("CHECK"))
+BLOCK6 = select(dataset, contains('BLOCK6.') & !contains("CHECK"))
+BLOCK7 = select(dataset, contains('BLOCK7.') & !contains("CHECK"))
+BLOCK8 = select(dataset, contains('BLOCK8.') & !contains("CHECK"))
+BLOCK9 = select(dataset, contains('BLOCK9.') & !contains("CHECK"))
+BLOCK10 = select(dataset, contains('BLOCK10.') & !contains("CHECK"))
+BLOCK11 = select(dataset, contains('BLOCK11.') & !contains("CHECK"))
+BLOCK12 = select(dataset, contains('BLOCK12.') & !contains("CHECK"))
+BLOCK13 = select(dataset, contains('BLOCK13.') & !contains("CHECK"))
+BLOCK14 = select(dataset, contains('BLOCK14.') & !contains("CHECK"))
+```
+
+Then, for each block separately we identify "good" participants, that is participants with nonzero variance in responses. This results with 14 lists of indices that represent good participants in each block.
+
+``` {r}
+BLOCKS = list(BLOCK1, BLOCK2, BLOCK3, BLOCK4, BLOCK5, BLOCK6, BLOCK7, BLOCK8, BLOCK9, BLOCK10, BLOCK11, BLOCK12, BLOCK13, BLOCK14)
+
+good = NULL
+for (i in 1:length(BLOCKS)) {
+  SD = apply(BLOCKS[[i]], 1, sd) # compute SD for each participant
+  good[i] = list(which(SD != 0)) # find participants with nonzero variance
+  cat(sprintf("BLOCK%s: %s participants with nonzero variance \n", i, length(good[[i]])))
+}
+```
+
+As you can see above, the list of good participants will differ from one block to the other. To identify participants with nonzero variance across blocks, we need to intersect those 14 lists.
+
+```{r}
+allgood = Reduce(intersect, good)
+```
+
+We can now clean the dataset:
+
+```{r}
+dataset = dataset[allgood,]
+```
+
+### Organize item information
+
+Furthermore, we create three additional variables, which we will later use to extract relevant information about the items. 
+
+`code_to_pl` returns the item's original text in Polish.
+
+```{r}
+code_to_pl = items$subquestion
+names(code_to_pl) = items$code
+```
+
+`code_to_en` returns the item's text translated into English.
+
+```{r}
+code_to_en = items$subquestion_ENG
+names(code_to_en) = items$code
+```
+
+`code_to_block` returns the number of the block, in which the given item was displayed.
+
+```{r}
+code_messy = colnames(dataset)
+code_splitted = strsplit(code_messy, ".", fixed = TRUE)
+code_flattened = as.data.frame(do.call(rbind, code_splitted))
+colnames(code_flattened) = c("block","code")
+
+code_to_block = code_flattened$block
+names(code_to_block) = code_flattened$code
+```
+
+### Simplify item codes
+
+This step is used to simplify the item codes in the final dataset (e.g. `SOR11` instead of `BLOCK1.SOR11.`).
+
+```{r}
+colnames(dataset) = names(code_to_block)
+```
+
+### Save outputs
+
+Save outputs required for further step(s).
+
+``` {r}
+save(dataset, code_to_pl, code_to_en, file = "./01/output/dataset.RData")
+```
