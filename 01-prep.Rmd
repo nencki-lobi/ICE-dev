@@ -20,27 +20,115 @@ input2 = read.table("./01/input/381735/results-survey381735.csv", header = T, se
 input3 = read.table("./01/input/977613/results-survey977613.csv", header = T, sep = ",", encoding = "UTF-8")
 ```
 
-`survey176496` and `survey381735` contain data from the general population (recruited by professional recruitment company), and `survey977613` contains data from climate activists (recruited via social media). 
+`survey176496` and `survey381735` contain data from the general population (recruited by professional recruitment company), and `survey977613` contains data from climate activists (recruited via social media).
 
-### Clean data based on quality check criteria
+Furthermore, in the case of `survey176496` and `survey381735` we use unique token codes to identify participants that the company confirmed to have recruited.
 
-We clean the data based on previously performed quality check analysis. In this analysis we used the following criteria:
-
-* consistent reporting of demographic data (sex, age)
-* correct responses to 2 out of 3 control questions
-
-As this is currently implemented in other, external script (written in MATLAB), we will import additional `.csv` files that contain lists of valid tokens for each survey and we will use this information to filter the data.
-
-**NOTE:** This step is applicable only to `survey176496` and `survey381735`. Therefore, we leave `survey977613` intact. 
+First, we remove any duplicated tokens. If more than two participants used the same token code, we keep the last entry.
 
 ```{r}
-valid1 = read.table("./01/input/176496/valid.csv", header = T, sep = "\t", encoding = "UTF-8")
-valid2 = read.table("./01/input/381735/valid.csv", header = T, sep = "\t", encoding = "UTF-8")
+input1 = filter(input1, !duplicated(input1['token'], fromLast = T))
+input2 = filter(input2, !duplicated(input2['token'], fromLast = T))
+```
 
-dataset1 = filter(input1,token %in% valid1$token)
-dataset2 = filter(input2,token %in% valid2$token)
+Next, we load additional `recruited*.csv` files that list participants (their tokens) recruited by the company. We use this information to filter out `survey176496` and `survey381735`.
+
+```{r}
+recruited1 = read.table("./01/input/176496/recruited.csv", header = T, sep = "\t", encoding = "UTF-8")
+recruited2 = read.table("./01/input/381735/recruited.csv", header = T, sep = "\t", encoding = "UTF-8")
+
+input1 = filter(input1,token %in% recruited1$token)
+input2 = filter(input2,token %in% recruited2$token)
+```
+
+The resulting sample sizes are as follows:
+
+```{r}
+surveys = data.frame(matrix(nrow = 3, ncol = 1))
+rownames(surveys) = c("176496", "381735", "977613")
+colnames(surveys) = c("N")
+
+surveys["176496",] = nrow(input1)
+surveys["381735",] = nrow(input2)
+surveys["977613",] = nrow(input3)
+
+kable(surveys)
+```
+
+The total number of participants is:  **`r nrow(input1) + nrow(input2) + nrow(input3)` participants**.
+
+### Clean data based on quality criteria
+
+We clean the data based on the following quality criteria:
+
+* correct responses to control questions
+* consistent reporting of demographic data (sex, age, climate concern)
+
+The first step (data cleaning based on control questions) is applicable to all surveys. However, incorrect responses to control questions were only identified in the case of `survey176496` and `survey381735`, but not in the case of `survey977613`.
+
+The second step (data cleaning based on demographic information) is applicable to `survey176496` and `survey381735` only. This is because demographic data was compared against data provided by the recruitment company.
+
+Thus, we clean data from `survey176496` and `survey381735` only, and leave `survey977613` intact.
+
+To clean the data, we need to identify those participants (their tokens) that met the above described criteria. As this is currently implemented in other, external script (written in MATLAB), here we only import the files that this script generated. 
+
+The `checks*.csv` files contain information on quality criteria met by each participant.
+
+```{r}
+checks1 = read.table("./01/input/176496/checks.csv", header = T, sep = "\t", encoding = "UTF-8")
+checks2 = read.table("./01/input/381735/checks.csv", header = T, sep = "\t", encoding = "UTF-8")
+```
+
+The number of participants to exclude based on quality criteria is as follows:
+
+``` {r}
+checks = matrix(nrow = 3, ncol = 6)
+colnames(checks) = c("No correct question", "< 2 correct questions", "< 3 correct questions", "Inconsistent sex", "Inconsistent age", "Inconsistent climate concern")
+rownames(checks) = rownames(surveys)
+
+checks[1,] = colSums(!checks1[,-1])
+checks[2,] = colSums(!checks2[,-1])
+  
+surveys = cbind(surveys, checks)
+kable(surveys)
+```
+
+Depending on how strict we want to be, the total number of participants to exclude is as follows:
+
+```{r}
+demo1 = checks1$sex_check & checks1$age_check & checks1$climate_check
+demo2 = checks2$sex_check & checks2$age_check & checks2$climate_check
+
+low1 = !(checks1$question_1_check & demo1)
+low2 = !(checks2$question_1_check & demo2)
+
+moderate1 = !(checks1$question_2_check & demo1)
+moderate2 = !(checks2$question_2_check & demo2)
+
+high1 = !(checks1$question_3_check & demo1)
+high2 = !(checks2$question_3_check & demo2)
+```
+
+```{r, include=FALSE}
+option = "moderate"
+nexcluded_quality = sum(moderate1) + sum(moderate2)
+```
+
+* `low`: correct responses to at least one control question and consistent demographic data (**`r sum(low1) + sum(low2)` participants** excluded)
+
+* `moderate`: correct responses to at least two control questions and consistent demographic data (**`r sum(moderate1) + sum(moderate2)` participants** excluded)
+
+* `high`: correct responses to all three control questions and consistent demographic data (**`r sum(high1) + sum(high2)` participants** excluded)
+
+Here, we will use the ``r option`` option:
+
+```{r}
+dataset1 = filter(input1,token %in% checks1[!moderate1,"token"])
+dataset2 = filter(input2,token %in% checks2[!moderate2,"token"])
 dataset3 = input3
 ```
+
+The total number of participants excluded based on quality criteria is:  **`r nexcluded_quality` participants**.
 
 ### Combine data
 
@@ -134,11 +222,17 @@ As you can see above, the list of good participants will differ from one block t
 allgood = Reduce(intersect, good)
 ```
 
+```{r, include=FALSE}
+nexcluded_variance = nrow(dataset) - length(allgood)
+```
+
 We can now clean the dataset:
 
 ```{r}
 dataset = dataset[allgood,]
 ```
+
+The total number of participants excluded based on variance of responses is:  **`r nexcluded_variance` participants**.
 
 ### Organize item information
 
