@@ -69,7 +69,14 @@ We perform factor rotation in a separate step.
 ``` {r, message = FALSE, results = 'hide'}
 loadings = PA$loadingsNOROT
 rotated = PROMAX(loadings, ppower=4, verbose=T)
+phi = rotated$phi
 rotated = rotated$pattern
+```
+
+```{r, include=FALSE}
+phi = as.data.frame(phi)
+colnames(phi) = c("Factor 1", "Factor 2", "Factor 3", "Factor 4", "Factor 5", "Factor 6", "Factor 7")
+rownames(phi) = c("**Factor 1**", "**Factor 2**", "**Factor 3**", "**Factor 4**", "**Factor 5**", "**Factor 6**", "**Factor 7**")
 ```
 
 ### Thresholding {.tabset}
@@ -120,6 +127,12 @@ for (i in 1:ncol(thresholded)) {
 }
 
 kable(nitems)
+```
+
+The factors correlations are as follows:
+
+```{r}
+kable(phi, digits = 2)
 ```
 
 The table below displays the factor loadings that passed the above criteria. Use the tabs below to switch between thresholded and unthresholded views.
