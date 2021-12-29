@@ -1,3 +1,9 @@
+# R Markdown report
+*.html
+
+# Generated outputs
+**/output/*
+
 # History files
 .Rhistory
 .Rapp.history
