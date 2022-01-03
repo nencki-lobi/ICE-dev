@@ -73,12 +73,6 @@ phi = rotated$phi
 rotated = rotated$pattern
 ```
 
-```{r, include=FALSE}
-phi = as.data.frame(phi)
-colnames(phi) = c("Factor 1", "Factor 2", "Factor 3", "Factor 4", "Factor 5", "Factor 6", "Factor 7")
-rownames(phi) = c("**Factor 1**", "**Factor 2**", "**Factor 3**", "**Factor 4**", "**Factor 5**", "**Factor 6**", "**Factor 7**")
-```
-
 ### Thresholding {.tabset}
 
 Based on the factor loadings, we need to decide which items should be included to the final version of the questionnaire.
