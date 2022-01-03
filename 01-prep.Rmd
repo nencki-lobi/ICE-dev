@@ -146,6 +146,12 @@ Therefore, we combine the datasets keeping only relevant columns.
 dataset = rbind(dataset1[,14:184], dataset2[,14:184], dataset3[,13:183])
 ```
 
+Also, we remove control questions:
+
+```{r}
+dataset = select(dataset, !contains("CHECK"))
+```
+
 ### Convert data
 
 Next, we need to recode the data to a format more suitable for the analysis.
