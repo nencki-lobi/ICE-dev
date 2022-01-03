@@ -180,60 +180,6 @@ dataset = dataset %>%
                            "Zdecydowanie tak" = 5)))
 ```
 
-### Clean data based on variance of responses
-
-Next, we clean the data based on the standard deviations (SDs) of participants' responses. Since items were presented in blocks, it should be most informative to investigate SDs within each block.
-
-Hence, we first identify items belonging to each block. Here, we discard control questions (`CHECK`), because even participants who contributed poor quality data (Polish: _klikacze_) could have made the effort to respond correctly to control questions.
-
-``` {r}
-BLOCK1 = select(dataset, contains('BLOCK1.') & !contains("CHECK"))
-BLOCK2 = select(dataset, contains('BLOCK2.') & !contains("CHECK"))
-BLOCK3 = select(dataset, contains('BLOCK3.') & !contains("CHECK"))
-BLOCK4 = select(dataset, contains('BLOCK4.') & !contains("CHECK"))
-BLOCK5 = select(dataset, contains('BLOCK5.') & !contains("CHECK"))
-BLOCK6 = select(dataset, contains('BLOCK6.') & !contains("CHECK"))
-BLOCK7 = select(dataset, contains('BLOCK7.') & !contains("CHECK"))
-BLOCK8 = select(dataset, contains('BLOCK8.') & !contains("CHECK"))
-BLOCK9 = select(dataset, contains('BLOCK9.') & !contains("CHECK"))
-BLOCK10 = select(dataset, contains('BLOCK10.') & !contains("CHECK"))
-BLOCK11 = select(dataset, contains('BLOCK11.') & !contains("CHECK"))
-BLOCK12 = select(dataset, contains('BLOCK12.') & !contains("CHECK"))
-BLOCK13 = select(dataset, contains('BLOCK13.') & !contains("CHECK"))
-BLOCK14 = select(dataset, contains('BLOCK14.') & !contains("CHECK"))
-```
-
-Then, for each block separately we identify "good" participants, that is participants with nonzero variance in responses. This results with 14 lists of indices that represent good participants in each block.
-
-``` {r}
-BLOCKS = list(BLOCK1, BLOCK2, BLOCK3, BLOCK4, BLOCK5, BLOCK6, BLOCK7, BLOCK8, BLOCK9, BLOCK10, BLOCK11, BLOCK12, BLOCK13, BLOCK14)
-
-good = NULL
-for (i in 1:length(BLOCKS)) {
-  SD = apply(BLOCKS[[i]], 1, sd) # compute SD for each participant
-  good[i] = list(which(SD != 0)) # find participants with nonzero variance
-  cat(sprintf("BLOCK%s: %s participants with nonzero variance \n", i, length(good[[i]])))
-}
-```
-
-As you can see above, the list of good participants will differ from one block to the other. To identify participants with nonzero variance across blocks, we need to intersect those 14 lists.
-
-```{r}
-allgood = Reduce(intersect, good)
-```
-
-```{r, include=FALSE}
-nexcluded_variance = nrow(dataset) - length(allgood)
-```
-
-We can now clean the dataset:
-
-```{r}
-dataset = dataset[allgood,]
-```
-
-The total number of participants excluded based on variance of responses is:  **`r nexcluded_variance` participants**.
-
 ### Organize item information
 
 Furthermore, we create three additional variables, which we will later use to extract relevant information about the items. 
