@@ -167,8 +167,7 @@ Second, the imported data is in `char` format. We need to recode it to either `f
 ``` {r}
 # recode to `factor` (categorical):
 # dataset = dataset %>%
-#   mutate_at(vars(1:171),
-#             ~factor(recode(.,
+#   mutate_all(~factor(recode(.,
 #                            "Zdecydowanie nie" = 1,
 #                            "Raczej nie " = 2,
 #                            "Ani tak, ani nie" = 3,
@@ -177,8 +176,7 @@ Second, the imported data is in `char` format. We need to recode it to either `f
 
 # recode to `int` (numeric)
 dataset = dataset %>%
-  mutate_at(vars(1:171),
-            list(~recode(.,
+  mutate_all(list(~recode(.,
                            "Zdecydowanie nie" = 1,
                            "Raczej nie" = 2,
                            "Ani tak, ani nie" = 3,
