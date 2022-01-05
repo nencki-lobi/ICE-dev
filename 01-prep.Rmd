@@ -110,8 +110,8 @@ high2 = !(checks2$question_3_check & demo2)
 ```
 
 ```{r, include=FALSE}
-option = "moderate"
-nexcluded_quality = sum(moderate1) + sum(moderate2)
+option = "high"
+nexcluded_quality = sum(high1) + sum(high2)
 ```
 
 * `low`: correct responses to at least one control question and consistent demographic data (**`r sum(low1) + sum(low2)` participants** excluded)
@@ -123,8 +123,8 @@ nexcluded_quality = sum(moderate1) + sum(moderate2)
 Here, we will use the ``r option`` option:
 
 ```{r}
-dataset1 = filter(input1,token %in% checks1[!moderate1,"token"])
-dataset2 = filter(input2,token %in% checks2[!moderate2,"token"])
+dataset1 = filter(input1,token %in% checks1[!high1,"token"])
+dataset2 = filter(input2,token %in% checks2[!high2,"token"])
 dataset3 = input3
 ```
 
