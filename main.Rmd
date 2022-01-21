@@ -33,6 +33,10 @@ library(stringr)
 
 ```
 
+```{r child = if (params$factor == 7) '04-questionnaire.Rmd'}
+
+```
+
 ``` {r}
 
 ```

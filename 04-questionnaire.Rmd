@@ -1,0 +1,71 @@
+## 04. Final questionnaire
+
+```{r, include=FALSE}
+set.seed(2137) # set seed for replicability
+```
+
+Lastly, we need to generate the final list of items for the questionnaire:
+
+* items included based on the identified factor structure
+* `SOR` items included based on theoretical / conceptual grounds.
+
+### Load inputs
+
+We load inputs required for the analysis: the preprocessed dataset, together with some helper variables (`code_to_pl`, `code_to_en`).
+
+``` {r}
+load("./01/output/dataset.RData")
+```
+
+Furthermore, we load information about which items we want to include to the final questionnaire. This information is a result of qualitative assessment, that was performed by the team members.
+
+``` {r}
+items7 = read.table("./03/input/items-per-factor-dropouts-7.tsv", header = T, sep = "\t", encoding = "UTF-8")
+rownames(items7) = items7$CODE
+
+items11 = read.table("./03/input/items-per-factor-dropouts-11.tsv", header = T, sep = "\t", encoding = "UTF-8")
+rownames(items11) = items11$CODE
+```
+
+``` {r, include=FALSE}
+selected7 = is.na(items7$LOW) & is.na(items7$SIM) & is.na(items7$UNC) & is.na(items7$EMO)
+selected11 = is.na(items11$LOW) & is.na(items11$SIM) & is.na(items11$UNC) & is.na(items11$EMO)
+```
+
+Overall we decided to keep:
+
+* `r sum(selected7)` items, identified based on the 7 factor model
+* `r sum(selected11)` `SOR` items, identified based on the 11 factor model.
+
+**NOTE:** To reproduce the exploratory factor analysis for a given number of factors, modify the `factors` parameter in the header section of the `main.Rmd` document.
+
+### Prepare outputs
+
+``` {r}
+ITEMS =  list(items7, items11)
+output = data.frame(matrix(ncol = 3, nrow = 0))
+
+for (i in 1:2) {
+  
+  items = ITEMS[[i]]
+  rownames(items) = items$CODE
+  
+  selected = is.na(items$LOW) & is.na(items$SIM) & is.na(items$UNC) & is.na(items$EMO)
+
+  codes = items$CODE[selected]
+  col1 = as.character(codes)
+  col2 = as.character(code_to_pl[codes])
+  col3 = as.character(code_to_en[codes])
+  
+  out = as.data.frame(cbind(col1, col2, col3))
+  output = rbind(output,out)
+}
+
+colnames(output) = c("CODE", "ITEM TEXT", "ITEM TEXT EN")
+```
+
+### Save outputs
+
+``` {r}
+write.table(output, file="./04/output/questionnaire.tsv", row.names = F, sep='\t', fileEncoding = "UTF-8")
+```
