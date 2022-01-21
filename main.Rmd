@@ -5,6 +5,8 @@ output:
     toc: true
 editor_options: 
   chunk_output_type: console
+params:
+  factors: 7
 ---
 
 ```{r setup, include=FALSE}
@@ -27,7 +29,7 @@ library(stringr)
 
 ```
 
-```{r child = '03-reliability.Rmd'}
+```{r child = if (params$factor == 7) '03-reliability.Rmd'}
 
 ```
 

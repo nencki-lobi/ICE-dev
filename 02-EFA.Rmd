@@ -61,7 +61,7 @@ Finally, we can proceed to the exploratory factor analysis (EFA). We assume the 
 **NOTE:** We use `polychoric` correlations!
 
 ``` {r, message = FALSE, results = 'hide'}
-PA = PA_FA(cor_matrix, Nfactors=7, iterpaf=250, rotate="none", verbose=T, Ncases=nrow(dataset))
+PA = PA_FA(cor_matrix, Nfactors=params$factors, iterpaf=250, rotate="none", verbose=T, Ncases=nrow(dataset))
 ```
 
 We perform factor rotation in a separate step.
@@ -231,5 +231,6 @@ colnames(output) = c("FACTOR", "CODE", "ITEM TEXT", "ITEM TEXT EN",	"LOAD")
 Save outputs required for further step(s).
 
 ``` {r}
-write.table(output, file="./02/output/items-per-factor.tsv", row.names = F, sep='\t', fileEncoding = "UTF-8")
+fname = paste("./02/output/items-per-factor-", as.character(params$factors),".tsv", sep="")
+write.table(output, file=fname, row.names = F, sep='\t', fileEncoding = "UTF-8")
 ```

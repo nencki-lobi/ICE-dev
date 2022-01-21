@@ -24,7 +24,8 @@ Specifically, we decided to retain 8 items per factor. We dropped items, that (c
 Please note, that items could be dropped due to single (e.g. `LOW`) or multiple (e.g. `LOW` and `UNC`) reasons.
 
 ``` {r}
-items =  read.table ("./03/input/items-per-factor-dropouts.tsv", header = T, sep = "\t", encoding="UTF-8")
+fname = paste("./03/input/items-per-factor-dropouts-", as.character(params$factors),".tsv", sep="")
+items =  read.table(fname, header = T, sep = "\t", encoding="UTF-8")
 rownames(items) = items$CODE
 
 selected = is.na(items$LOW) & is.na(items$SIM) & is.na(items$UNC) & is.na(items$EMO)
