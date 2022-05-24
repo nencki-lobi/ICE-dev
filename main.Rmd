@@ -16,7 +16,6 @@ options(knitr.kable.NA = '')
 library(knitr)
 library(dplyr)
 library(psych)
-library(doBy)
 library(EFA.dimensions)
 library(stringr)
 ```

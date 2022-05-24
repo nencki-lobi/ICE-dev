@@ -91,11 +91,13 @@ thresholded = matrix(, nrow = nrow(rotated), ncol = ncol(rotated))
 colnames(thresholded) = colnames(rotated)
 rownames(thresholded) = rownames(rotated)
 
+best = apply(abs(rotated), 1, order, decreasing=TRUE)
+
 for (i in 1:nrow(rotated)) {
   
   tmp = unname(rotated[i,])
+  idx = unname(best[,i])
   
-  idx = which.maxn(abs(tmp), n = 2)
   max1 = idx[1]
   max2 = idx[2]
   
