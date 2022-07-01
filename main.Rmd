@@ -20,19 +20,15 @@ library(EFA.dimensions)
 library(stringr)
 ```
 
-```{r child = '01-prep.Rmd'}
+```{r child = '03-EFA.Rmd'}
 
 ```
 
-```{r child = '02-EFA.Rmd'}
+```{r child = if (params$factor == 7) '04-reliability.Rmd'}
 
 ```
 
-```{r child = if (params$factor == 7) '03-reliability.Rmd'}
-
-```
-
-```{r child = if (params$factor == 7) '04-questionnaire.Rmd'}
+```{r child = if (params$factor == 7) '05-questionnaire.Rmd'}
 
 ```
 

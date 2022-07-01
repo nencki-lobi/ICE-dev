@@ -1,4 +1,4 @@
-## 02. Exploratory factor analysis (EFA)
+## Exploratory factor analysis (EFA)
 
 ```{r, include=FALSE}
 set.seed(2137) # set seed for replicability
@@ -9,7 +9,40 @@ set.seed(2137) # set seed for replicability
 We load inputs required for the analysis: the preprocessed dataset, together with some helper variables (`code_to_pl`, `code_to_en`).
 
 ``` {r}
-load("./01/output/dataset.RData")
+load("./02/output/dataset.RData")
+```
+
+### Subset data
+
+We subset data for the analysis, as well as simplify the naming convention (e.g. `SOR11` instead of `ICE-168-pl.SOR11`).
+
+```{r}
+dataset = select(qdata, contains("ICE-168"))
+colnames(dataset) = names(code_to_block)
+```
+
+### Convert data
+
+We need to recode data to a format more suitable for the analysis.
+
+``` {r}
+
+dataset = as.data.frame(apply(dataset,2,str_trim))
+
+dataset = dataset %>%
+  mutate_all(list(~recode(.,
+                           "Zdecydowanie nie" = 1,
+                           "Raczej nie" = 2,
+                           "Ani tak, ani nie" = 3,
+                           "Raczej tak" = 4,
+                           "Zdecydowanie tak" = 5)))
+```
+
+We save the resulting dataset for easier access in subsequent analysis steps:
+
+``` {r}
+save(dataset, code_to_pl, code_to_en, code_to_block, 
+     file = "./03/input/dataset.RData")
 ```
 
 ### Correlation matrix
@@ -233,6 +266,6 @@ colnames(output) = c("FACTOR", "CODE", "ITEM TEXT", "ITEM TEXT EN",	"LOAD")
 Save outputs required for further step(s).
 
 ``` {r}
-fname = paste("./02/output/items-per-factor-", as.character(params$factors),".tsv", sep="")
+fname = paste("./03/output/items-per-factor-", as.character(params$factors),".tsv", sep="")
 write.table(output, file=fname, row.names = F, sep='\t', fileEncoding = "UTF-8")
 ```

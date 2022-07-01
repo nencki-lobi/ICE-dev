@@ -1,4 +1,4 @@
-## 04. Final questionnaire
+## Final questionnaire
 
 ```{r, include=FALSE}
 set.seed(2137) # set seed for replicability
@@ -11,19 +11,19 @@ Lastly, we need to generate the final list of items for the questionnaire:
 
 ### Load inputs
 
-We load inputs required for the analysis: the preprocessed dataset, together with some helper variables (`code_to_pl`, `code_to_en`).
+We load data required for the analysis, together with some helper variables (`code_to_pl`, `code_to_en`).
 
 ``` {r}
-load("./01/output/dataset.RData")
+load("./03/input/dataset.RData")
 ```
 
 Furthermore, we load information about which items we want to include to the final questionnaire. This information is a result of qualitative assessment, that was performed by the team members.
 
 ``` {r}
-items7 = read.table("./03/input/items-per-factor-dropouts-7.tsv", header = T, sep = "\t", encoding = "UTF-8")
+items7 = read.table("./04/input/items-per-factor-dropouts-7.tsv", header = T, sep = "\t", encoding = "UTF-8")
 rownames(items7) = items7$CODE
 
-items11 = read.table("./03/input/items-per-factor-dropouts-11.tsv", header = T, sep = "\t", encoding = "UTF-8")
+items11 = read.table("./04/input/items-per-factor-dropouts-11.tsv", header = T, sep = "\t", encoding = "UTF-8")
 rownames(items11) = items11$CODE
 ```
 
@@ -67,5 +67,5 @@ colnames(output) = c("CODE", "ITEM TEXT", "ITEM TEXT EN")
 ### Save outputs
 
 ``` {r}
-write.table(output, file="./04/output/questionnaire.tsv", row.names = F, sep='\t', fileEncoding = "UTF-8")
+write.table(output, file="./05/output/questionnaire.tsv", row.names = F, sep='\t', fileEncoding = "UTF-8")
 ```

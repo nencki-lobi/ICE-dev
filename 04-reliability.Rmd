@@ -1,4 +1,4 @@
-## 03. Reliability analysis
+## Reliability analysis
 
 ```{r, include=FALSE}
 set.seed(2137) # set seed for replicability
@@ -6,10 +6,10 @@ set.seed(2137) # set seed for replicability
 
 ### Load inputs
 
-We load inputs required for the analysis: the preprocessed dataset, together with some helper variables (`code_to_pl`, `code_to_en`).
+We load data required for the analysis, together with some helper variables (`code_to_pl`, `code_to_en`).
 
 ``` {r}
-load("./01/output/dataset.RData")
+load("./03/input/dataset.RData")
 ```
 
 Also, we load information about which items we want to keep and which items we want to drop. This information is a result of qualitative assessment, that was performed by the team members.
@@ -24,7 +24,7 @@ Specifically, we decided to retain 8 items per factor. We dropped items, that (c
 Please note, that items could be dropped due to single (e.g. `LOW`) or multiple (e.g. `LOW` and `UNC`) reasons.
 
 ``` {r}
-fname = paste("./03/input/items-per-factor-dropouts-", as.character(params$factors),".tsv", sep="")
+fname = paste("./04/input/items-per-factor-dropouts-", as.character(params$factors),".tsv", sep="")
 items =  read.table(fname, header = T, sep = "\t", encoding="UTF-8")
 rownames(items) = items$CODE
 
