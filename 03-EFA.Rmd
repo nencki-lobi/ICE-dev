@@ -64,16 +64,29 @@ cor_matrix = POLYCHORIC_R(dataset, method = "Fox", verbose = F)
 Next, we proceed to the exploratory factor analysis (EFA). 
 
 ``` {r, message = FALSE, results = 'hide'}
-PA = PA_FA(cor_matrix, Nfactors=params$factors, iterpaf=250, rotate="none", verbose=T, Ncases=nrow(dataset))
+PA = PA_FA(cor_matrix, Nfactors=params$factors, iterpaf=250, rotate="PROMAX", Ncases=nrow(dataset), ppower = 4, verbose=F)
 ```
 
-We perform factor rotation in a separate step.
+We extract relevant information for later use:
 
 ``` {r, message = FALSE, results = 'hide'}
-loadings = PA$loadingsNOROT
-rotated = PROMAX(loadings, ppower=4, verbose=T)
-phi = rotated$phi
-rotated = rotated$pattern
+phi = PA$phi
+rotated = PA$pattern
+totvarexplNOROT1 = PA$totvarexplNOROT1
+totvarexplROT = as.data.frame(PA$totvarexplROT)
+```
+
+We inspect eigenvalues, proportion of variance explained by each factor, as well as cumulative proportion of variance:
+
+``` {r}
+kable(head(totvarexplNOROT1, params$factors))
+```
+
+And also total variance explained after the rotation:
+
+``` {r}
+colnames(totvarexplROT) = c("Total Variance Expl. After Rotation")
+kable(totvarexplROT)
 ```
 
 ### Thresholding {.tabset}
