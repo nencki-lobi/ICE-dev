@@ -2,6 +2,7 @@
 title: | 
     | ICE development - Study 1 data analysis -
     | `r params$factors` factors solution
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
     toc: true
@@ -30,7 +31,7 @@ library(stringr)
 
 ```
 
-```{r child = if (params$factor == 7) '05-questionnaire.Rmd'}
+```{r child = if (params$factors == 7) '05-questionnaire.Rmd'}
 
 ```
 

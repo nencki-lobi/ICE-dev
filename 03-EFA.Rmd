@@ -55,7 +55,7 @@ First, we create a correlation matrix that will be used in subsequent steps.
 cor_matrix = POLYCHORIC_R(dataset, method = "Fox", verbose = F)
 ```
 
-```{r child = if (params$factor == 7) '03-EFA-extras.Rmd'}
+```{r child = if (params$factors == 7) '03-EFA-extras.Rmd'}
 
 ```
 
