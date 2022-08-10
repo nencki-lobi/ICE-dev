@@ -1,0 +1,33 @@
+### Diagnostic tests
+
+Next, we run necessary diagnostic tests to make sure that our data are suitable for EFA.
+
+First, we run the **Bartlett's test**, which checks whether a correlation matrix is factorable.
+
+``` {r}
+cortest.bartlett(cor_matrix, n=200)
+```
+
+Second, we run the **Kaiser-Meyer-Olkin (KMO) test**, which provides a measure of sampling adequacy (MSA).
+
+``` {r}
+KMO(cor_matrix)
+```
+
+Both tests confirm that our data are suitable for EFA.
+
+### Decision on the number of factors
+
+Next, we need to decide on the number of factors to extract. We use `RAWPAR`, that is parallel analysis of eigenvalues ([Horn, 1965](https://link.springer.com/article/10.1007/BF02289447)).
+
+The parallel analysis procedure for deciding on the number of components or factors involves extracting eigenvalues from random data sets that parallel the actual data set with regard to the number of cases and variables. For example, if the original data set consists of _m_ observations for each of _k_ variables, then a series of random data matrices of size _m_ by _k_ would be generated, and eigenvalues would be computed for the correlation matrices for the original, real data and for each of the random data sets. The eigenvalues derived from the actual data are then compared to the eigenvalues derived from the random data.  In Horn's original description of this procedure, the mean eigenvalues from the random data served as the comparison baseline, whereas the more common current practice is to use the eigenvalues that correspond to the desired percentile (typically the 95th) of the distribution of random data eigenvalues. Factors or components are retained as long as the ith eigenvalue from the actual data is greater than the ith eigenvalue from the random data.
+
+**NOTE:** For the final report we should use `Ndatasets = 10000`.
+
+**NOTE:** We use `polychoric` correlations!
+
+``` {r}
+#RAWPAR(cor_matrix, randtype = "permuted", Ndatasets=1000, factormodel="PCA", percentile=95, corkindRAND="polychoric", verbose=T, Ncases=nrow(dataset))
+```
+
+We assume the number of factors to extract based on the result of the `RAWPAR` analysis.

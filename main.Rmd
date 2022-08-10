@@ -1,5 +1,7 @@
 ---  
-title: "GRIEG questionnaire data analysis" 
+title: | 
+    | ICE development - Study 1 data analysis -
+    | `r params$factors` factors solution
 output: 
   html_document:
     toc: true
