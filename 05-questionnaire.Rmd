@@ -1,10 +1,10 @@
-## Final questionnaire
+## Final list of items
 
 ```{r, include=FALSE}
 set.seed(2137) # set seed for replicability
 ```
 
-Lastly, we need to generate the final list of items for the questionnaire:
+Lastly, we need to generate the final list of items for further empirical testing:
 
 * items included based on the identified factor structure
 * `SOR` items included based on theoretical / conceptual grounds.
@@ -17,7 +17,7 @@ We load data required for the analysis, together with some helper variables (`co
 load("./03/input/dataset.RData")
 ```
 
-Furthermore, we load information about which items we want to include to the final questionnaire. This information is a result of qualitative assessment, that was performed by the team members.
+Furthermore, we load information about which items we want to include to the final list of items. This information is a result of qualitative assessment, that was performed by the team members.
 
 ``` {r}
 items7 = read.table("./04/input/items-per-factor-dropouts-7.tsv", header = T, sep = "\t", encoding = "UTF-8")
@@ -37,8 +37,6 @@ Overall we decided to keep:
 * `r sum(selected7)` items, identified based on the 7 factor model
 * `r sum(selected11)` `SOR` items, identified based on the 11 factor model.
 
-**NOTE:** To reproduce the exploratory factor analysis for a given number of factors, modify the `factors` parameter in the header section of the `main.Rmd` document.
-
 ### Prepare outputs
 
 ``` {r}
@@ -53,19 +51,17 @@ for (i in 1:2) {
   selected = is.na(items$LOW) & is.na(items$SIM) & is.na(items$UNC) & is.na(items$EMO)
 
   codes = items$CODE[selected]
-  col1 = as.character(codes)
-  col2 = as.character(code_to_pl[codes])
-  col3 = as.character(code_to_en[codes])
+  col1 = as.character(code_to_pl[codes])
+  col2 = as.character(code_to_en[codes])
+  col3 = as.character(codes)
   
   out = as.data.frame(cbind(col1, col2, col3))
   output = rbind(output,out)
 }
-
-colnames(output) = c("CODE", "ITEM TEXT", "ITEM TEXT EN")
 ```
 
 ### Save outputs
 
 ``` {r}
-write.table(output, file="./05/output/questionnaire.tsv", row.names = F, sep='\t', fileEncoding = "UTF-8")
+write.table(output, file="./05/output/questionnaire.tsv", row.names = F, col.names = F, sep='\t', fileEncoding = "UTF-8")
 ```

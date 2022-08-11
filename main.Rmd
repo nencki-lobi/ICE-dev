@@ -23,6 +23,11 @@ library(EFA.dimensions)
 library(stringr)
 ```
 
+```{r include=FALSE}
+source('01.R')
+source('02.R')
+```
+
 ```{r child = '03-EFA.Rmd'}
 
 ```
@@ -34,15 +39,3 @@ library(stringr)
 ```{r child = if (params$factors == 7) '05-questionnaire.Rmd'}
 
 ```
-
-``` {r}
-
-```
-
-## Note
-
-```{r, echo=FALSE}
-# use this block, to print output only (no r syntax)
-```
-
-Note that the `echo = FALSE` parameter was added to some of the R code chunks to prevent them from printing.
