@@ -1,8 +1,8 @@
 FACTOR	CODE	ITEM TEXT	ITEM TEXT EN	LOAD	LOW	SIM	UNC	EMO	NOTES
-8	SOR13	Czuję żal, gdy myślę o znikających bezpowrotnie gatunkach zwierząt i roślin w następstwie zmiany klimatu.	I’m filled with sorrow for all the disappearing plant and animal species, resulting from climate change.	-0,78					
-8	SOR8	Czuję smutek, kiedy obserwuję postępującą pod wpływem zmiany klimatu degradację przyrody.	I feel saddened by the progressive degradation of nature as a result of climate change.	-0,54	1				
-8	SOR6	Smutno mi z powodu świata, który odchodzi bezpowrotnie w wyniku zmiany klimatu.	I feel saddened by the world that is irretrievably vanishing as a result of climate change.	-0,58					
-8	SOR4	Jest mi przykro, gdy myślę o możliwościach, które nieodwracalnie tracimy wraz z postępującą zmianą klimatu.	I feel sorry about the possibilities we are irreversibly losing as a result of climate change.	-0,55					
-8	SOR12	Wymieranie gatunków w następstwie zmiany klimatu wywołuje we mnie smutek.	I am saddened by the extinction of species as a result of climate change.	-0,75		1			Similar to SOR13
-8	SOR14	Smuci mnie, że przez zmianę klimatu cierpi tyle stworzeń.	I’m sad that so many species are suffering because of climate change.	-0,57					
-8	SOR9	Czuję żal, gdy myślę o miejscach, które znikają przez zmianę klimatu.	I feel sorry for all the places that are disappearing as a result of climate change.	-0,52	1				
+8	SOR13	"Czuję żal, gdy myślę o znikających bezpowrotnie gatunkach zwierząt i roślin w następstwie zmiany klimatu."	The thought of so many species going extinct under the pressure of climate change fills me with sorrow.	-0.78					
+8	SOR8	"Czuję smutek, kiedy obserwuję postępującą pod wpływem zmiany klimatu degradację przyrody."	I feel saddened by the progressive degradation of nature as a result of climate change.	-0.54	1				
+8	SOR6	"Smutno mi z powodu świata, który odchodzi bezpowrotnie w wyniku zmiany klimatu."	The thought that the world I know is disappearing forever because of climate change makes me sad.	-0.58					
+8	SOR4	"Jest mi przykro, gdy myślę o możliwościach, które nieodwracalnie tracimy wraz z postępującą zmianą klimatu."	I feel sorry about the possibilities we are losing forever because of climate change.	-0.55					
+8	SOR12	"Wymieranie gatunków w następstwie zmiany klimatu wywołuje we mnie smutek."	I am saddened by the extinction of species as a result of climate change.	-0.75		1			Similar to SOR13
+8	SOR14	"Smuci mnie, że przez zmianę klimatu cierpi tyle stworzeń."	I am sad that so many living creatures suffer because of climate change.	-0.57					
+8	SOR9	"Czuję żal, gdy myślę o miejscach, które znikają przez zmianę klimatu."	I feel sorry for all the places that are disappearing as a result of climate change.	-0.52	1				

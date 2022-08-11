@@ -20,10 +20,10 @@ load("./03/input/dataset.RData")
 Furthermore, we load information about which items we want to include to the final list of items. This information is a result of qualitative assessment, that was performed by the team members.
 
 ``` {r}
-items7 = read.table("./04/input/items-per-factor-dropouts-7.tsv", header = T, sep = "\t", encoding = "UTF-8")
+items7 = read.table("./04/input/items-per-factor-dropouts-7.tsv", header = T, sep = "\t",  quote = "", encoding = "UTF-8")
 rownames(items7) = items7$CODE
 
-items11 = read.table("./04/input/items-per-factor-dropouts-11.tsv", header = T, sep = "\t", encoding = "UTF-8")
+items11 = read.table("./04/input/items-per-factor-dropouts-11.tsv", header = T, sep = "\t",  quote = "", encoding = "UTF-8")
 rownames(items11) = items11$CODE
 ```
 

@@ -25,7 +25,7 @@ Please note, that items could be dropped due to single (e.g. `LOW`) or multiple 
 
 ``` {r}
 fname = paste("./04/input/items-per-factor-dropouts-", as.character(params$factors),".tsv", sep="")
-items =  read.table(fname, header = T, sep = "\t", encoding="UTF-8")
+items =  read.table(fname, header = T, sep = "\t",  quote = "", encoding="UTF-8")
 rownames(items) = items$CODE
 
 selected = is.na(items$LOW) & is.na(items$SIM) & is.na(items$UNC) & is.na(items$EMO)
