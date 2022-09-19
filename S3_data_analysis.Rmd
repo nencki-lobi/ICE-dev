@@ -1,6 +1,7 @@
 ---
 title: "ICE development - Study 3 - data analysis"
 author: "Michalina Marczak"
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
     toc: true
@@ -646,5 +647,5 @@ knitr::kable(correlation_matrix(cor_df2, type = "spearman", digits = 2, use = 'l
 ```
 
 ## Note
-This html output presents the general logic of the analysis along with some results not outlined in the main body of the manuscript. Please note that the full R code for the data cleaning and data analysis is available in the supplementary materials on the accompanying OSF website.
 
+This HTML output presents the general logic of the analysis along with some results not outlined in the main body of the manuscript. Please note that the full R code for the data cleaning and data analysis is available in the supplementary materials on the accompanying OSF website.

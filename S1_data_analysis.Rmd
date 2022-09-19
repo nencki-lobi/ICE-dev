@@ -1,11 +1,14 @@
 ---  
 title: | 
-    | ICE development - Study 1 data analysis -
+    | ICE development - Study 1 - data analysis -
     | `r params$factors` factors solution
+author: "Małgorzata Wierzba, Jan Szczypiński, Dominika Zaremba, Michalina Marczak"
 date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
     toc: true
+    toc_depth: 3
+    toc_float: true
 editor_options: 
   chunk_output_type: console
 params:
@@ -39,3 +42,7 @@ source('./S1/02-preprocessing.R')
 ```{r child = if (params$factors == 7) 'S1/05-questionnaire.Rmd'}
 
 ```
+
+## Note
+
+This HTML output presents the general logic of the analysis along with some results not outlined in the main body of the manuscript. Please note that the full R code for the data cleaning and data analysis is available in the supplementary materials on the accompanying OSF website.
