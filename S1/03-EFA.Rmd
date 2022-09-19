@@ -4,7 +4,7 @@
 set.seed(2137) # set seed for replicability
 ```
 
-**NOTE:** To reproduce the exploratory factor analysis for a given number of factors, modify the `factors` parameter in the header section of the `main.Rmd` document.
+**NOTE:** To reproduce the exploratory factor analysis for a given number of factors, modify the `factors` parameter in the header section of the parent `.Rmd` document.
 
 ### Load inputs
 
