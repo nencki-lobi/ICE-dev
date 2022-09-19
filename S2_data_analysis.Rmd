@@ -1,0 +1,960 @@
+---
+title: "ICE Development - Study 2 - data analysis"
+author: "Michalina Marczak"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, include=F}
+#set the global options
+options(max.print=999999)  #allows printing out large outputs
+options(scipen = 999)       #disables scientific notation (uses decimal instead) 
+set.seed(9999) # set seed for replicability
+
+# LIBRARIES
+
+####### load the packages needed for data analysis 
+library(tidyverse)
+library(dplyr)
+library(psych)
+library(mvnormalTest)
+library(Hmisc)
+library(lavaan)
+library(car)
+library(tidySEM)
+library(stats)
+library(semTools)
+library(astatur) #devtools::install_github("ihrke/astatur")
+library(ggsignif)
+library(gridExtra)
+library(vegan)
+library(coin)
+library(gdata)
+library(rNuggets) #remotes::install_github("LukasWallrich/rNuggets")
+
+# CUSTOM FUNCTIONS
+#the first tw are from Paul van der Laken (https://paulvanderlaken.com/2020/07/28/publication-ready-correlation-matrix-significance-r/#correlation_matrix), and the last one is from Mehmet Mehmetoglu.
+
+#' correlation_matrix
+#' Creates a publication-ready / formatted correlation matrix, using `Hmisc::rcorr` in the backend.
+#'
+#' @param df dataframe; containing numeric and/or logical columns to calculate correlations for
+#' @param type character; specifies the type of correlations to compute; gets passed to `Hmisc::rcorr`; options are `"pearson"` or `"spearman"`; defaults to `"pearson"`
+#' @param digits integer/double; number of decimals to show in the correlation matrix; gets passed to `formatC`; defaults to `3`
+#' @param decimal.mark character; which decimal.mark to use; gets passed to `formatC`; defaults to `.`
+#' @param use character; which part of the correlation matrix to display; options are `"all"`, `"upper"`, `"lower"`; defaults to `"all"`
+#' @param show_significance boolean; whether to add `*` to represent the significance levels for the correlations; defaults to `TRUE`
+#' @param replace_diagonal boolean; whether to replace the correlations on the diagonal; defaults to `FALSE`
+#' @param replacement character; what to replace the diagonal and/or upper/lower triangles with; defaults to `""` (empty string)
+#'
+#' @return a correlation matrix
+#' @export
+#'
+#' @examples
+#' `correlation_matrix(iris)`
+#' `correlation_matrix(mtcars)`
+correlation_matrix <- function(df, 
+                               type = "pearson",
+                               digits = 3, 
+                               decimal.mark = ".",
+                               use = "all", 
+                               show_significance = TRUE, 
+                               replace_diagonal = FALSE, 
+                               replacement = ""){
+  
+  # check arguments
+  stopifnot({
+    is.numeric(digits)
+    digits >= 0
+    use %in% c("all", "upper", "lower")
+    is.logical(replace_diagonal)
+    is.logical(show_significance)
+    is.character(replacement)
+  })
+  # we need the Hmisc package for this
+  require(Hmisc)
+  
+  # retain only numeric and boolean columns
+  isNumericOrBoolean = vapply(df, function(x) is.numeric(x) | is.logical(x), logical(1))
+  if (sum(!isNumericOrBoolean) > 0) {
+    cat('Dropping non-numeric/-boolean column(s):', paste(names(isNumericOrBoolean)[!isNumericOrBoolean], collapse = ', '), '\n\n')
+  }
+  df = df[isNumericOrBoolean]
+  
+  # transform input data frame to matrix
+  x <- as.matrix(df)
+  
+  # run correlation analysis using Hmisc package
+  correlation_matrix <- Hmisc::rcorr(x, type = type)
+  R <- correlation_matrix$r # Matrix of correlation coeficients
+  p <- correlation_matrix$P # Matrix of p-value 
+  
+  # transform correlations to specific character format
+  Rformatted = formatC(R, format = 'f', digits = digits, decimal.mark = decimal.mark)
+  
+  # if there are any negative numbers, we want to put a space before the positives to align all
+  if (sum(!is.na(R) & R < 0) > 0) {
+    Rformatted = ifelse(!is.na(R) & R > 0, paste0(" ", Rformatted), Rformatted)
+  }
+
+  # add significance levels if desired
+  if (show_significance) {
+    # define notions for significance levels; spacing is important.
+    stars <- ifelse(is.na(p), "", ifelse(p < .001, "***", ifelse(p < .01, "**", ifelse(p < .05, "*", ""))))
+    Rformatted = paste0(Rformatted, stars)
+  }
+  
+  # make all character strings equally long
+  max_length = max(nchar(Rformatted))
+  Rformatted = vapply(Rformatted, function(x) {
+    current_length = nchar(x)
+    difference = max_length - current_length
+    return(paste0(x, paste(rep(" ", difference), collapse = ''), sep = ''))
+  }, FUN.VALUE = character(1))
+  
+  # build a new matrix that includes the formatted correlations and their significance stars
+  Rnew <- matrix(Rformatted, ncol = ncol(x))
+  rownames(Rnew) <- colnames(Rnew) <- colnames(x)
+  
+  # replace undesired values
+  if (use == 'upper') {
+    Rnew[lower.tri(Rnew, diag = replace_diagonal)] <- replacement
+  } else if (use == 'lower') {
+    Rnew[upper.tri(Rnew, diag = replace_diagonal)] <- replacement
+  } else if (replace_diagonal) {
+    diag(Rnew) <- replacement
+  }
+  
+  return(Rnew)
+}
+
+
+#' save_correlation_matrix
+#' Creates and save to file a fully formatted correlation matrix, using `correlation_matrix` and `Hmisc::rcorr` in the backend
+#' @param df dataframe; passed to `correlation_matrix`
+#' @param filename either a character string naming a file or a connection open for writing. "" indicates output to the console; passed to `write.csv`
+#' @param ... any other arguments passed to `correlation_matrix`
+#'
+#' @return NULL
+#'
+#' @examples
+#' `save_correlation_matrix(df = iris, filename = 'iris-correlation-matrix.csv')`
+#' `save_correlation_matrix(df = mtcars, filename = 'mtcars-correlation-matrix.csv', digits = 3, use = 'lower')`
+save_correlation_matrix = function(df, filename, ...) {
+  return(write.csv2(correlation_matrix(df, ...), file = filename))
+}
+
+condisc <- function(x){
+  std.loadings<- inspect(x, what="std")$lambda
+  #std.loadings
+  std.loadings[std.loadings==0] <- NA
+  #std.loadings
+  std.loadings <- std.loadings^2
+  #std.loadings
+  ave <- colMeans(std.loadings, na.rm=TRUE)
+  #ave
+  #factor correlation matrix
+  fcor <- lavInspect(x, "cor.lv")
+  #fcor
+  sqfcor <- fcor^2
+  #sqfcor
+  list(Squared_Factor_Correlation=round(sqfcor, digits=3),
+       Average_Variance_Extracted=round(ave, digits=3))
+}
+
+```
+
+```{r, include=F}
+load("./S2/02/output/dataset.RData")
+```
+```{r, include=F}
+data.for.CFA <- dplyr::select(qdata, starts_with("ICE-60"))
+```
+
+```{r, include=F}
+ICE_data <- as.data.frame(data.for.CFA)
+
+#change the variables type from character to numeric (keeping them in the data frame format)
+ICE_data <- as.data.frame(lapply(ICE_data, as.numeric))
+```
+
+```{r, include=F}
+####explore & inspect the ICE data for consistency
+#is there any missing data?
+sum(colSums(is.na(ICE_data)))
+
+#a categorical representation of the ICE data to check for inconsistent values
+lapply(ICE_data, table)
+
+# For the descriptives, the response format should be 1-5 not 0-4, hence we add 1 to each value in the data frame
+ICE_data <- ICE_data + 1
+
+# Descriptives of the data
+psych::describe(ICE_data)
+```
+## Inspecting the climate emotions data
+
+### Distributions of climate emotions data {.tabset}
+Let's check the assumptions for Confirmatory Factor Analysis (CFA): multi- & uni-variate normality check. We will perform formal tests: Mardia's test for multivariate skewness and kurtosis & Shapiro-Wilk for univariate normality, as well as a graphical inspection.
+
+#### Formal tests
+```{r, include=T, echo=F}
+mvnormalTest::mardia(ICE_data, std = TRUE) #both Mardia’s test for multivariate skewness and kurtosis & Shapiro-Wilk for univariate normality are available with this call
+```
+
+#### Graphical inspection
+```{r, echo = F}
+#additional visual exploration
+theme_set(
+  theme_minimal() +
+    theme(legend.position = "top")
+)
+
+ICE.gathered <- ICE_data %>%
+  as_tibble() %>%
+  select_if(is.numeric) %>%
+  gather(key = "variable", value = "value")
+
+ggplot(ICE.gathered, aes(value)) +
+  geom_density(fill = "lightgrey") +
+  facet_wrap(~variable)
+```
+
+The values from the formal tests imply that we should reject the null hypotheses of uni- & multivariate normality. The plots corroborate the observation of univariate non-normality.
+
+## Confirmatory Factor Analysis
+
+### The EFA-informed model
+We specify the first model informed by the EFA in Study 1.
+
+```{r, include=T}
+model <- 'climate_anger =~ ICE.60.pl.ANG14 + ICE.60.pl.ANG13 + ICE.60.pl.ANG10 + ICE.60.pl.ANG5 + ICE.60.pl.ANG6 + ICE.60.pl.ANG8 + ICE.60.pl.ANG3 + ICE.60.pl.ANG1
+          climate_contempt =~ ICE.60.pl.IND7 + ICE.60.pl.DIS5 + ICE.60.pl.DIS13 + ICE.60.pl.DIS10 + ICE.60.pl.IND6 + ICE.60.pl.DIS7 + ICE.60.pl.IND2 + ICE.60.pl.IND13
+          climate_enthusiasm =~ ICE.60.pl.EMP9 + ICE.60.pl.EMP12 + ICE.60.pl.HOPF9 + ICE.60.pl.HOPF8 + ICE.60.pl.HOPF10 + ICE.60.pl.EMP14 + ICE.60.pl.HOPF13 + ICE.60.pl.EMP7
+          climate_powerlessness =~ ICE.60.pl.POWL11 + ICE.60.pl.POWL5 + ICE.60.pl.POWL7 + ICE.60.pl.POWL4 + ICE.60.pl.POWL8 + ICE.60.pl.POWL12 + ICE.60.pl.POWL2 + ICE.60.pl.POWL13
+          climate_guilt =~ ICE.60.pl.GUI11 + ICE.60.pl.GUI6 + ICE.60.pl.GUI2 + ICE.60.pl.GUI8 + ICE.60.pl.GUI9 + ICE.60.pl.GUI4 + ICE.60.pl.GUI12 + ICE.60.pl.GUI14
+          climate_isolation =~ ICE.60.pl.ISO4+ ICE.60.pl.ISO13 + ICE.60.pl.ISO5 + ICE.60.pl.ISO8 + ICE.60.pl.ISO3 + ICE.60.pl.ISO12 + ICE.60.pl.ISO2 + ICE.60.pl.ISO9
+          climate_anxiety =~ ICE.60.pl.APP10 + ICE.60.pl.HOPL7 + ICE.60.pl.HOPL1 + ICE.60.pl.APP2 + ICE.60.pl.APP7 + ICE.60.pl.HOPL5 + ICE.60.pl.HOPL11 + ICE.60.pl.APP14
+          climate_sorrow =~ ICE.60.pl.SOR13 + ICE.60.pl.SOR6 + ICE.60.pl.SOR4 + ICE.60.pl.SOR14'
+```
+
+We fit the CFA model with Satorra-Bentler MLM because the data deviates significantly 
+from the normal distribution (yet there is no need to use MLR because we have complete data); Let's inspect the fit indices.
+
+```{r, include=T}
+model.fit <- cfa(model, data = ICE_data, estimator = "MLM")
+lavaan::fitmeasures(model.fit, fit.measures = c("chisq.scaled", "pvalue.scaled", "df.scaled", "cfi.scaled", "tli.scaled", "rmsea.scaled", "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled", "srmr"))
+```
+Fit indices indicate room for improvement.
+
+### Localised areas of strain
+Let's inspect potential localised areas of strain, starting from having a look at the matrix of standardised residuals.
+```{r, include=F}
+resid(model.fit, "standardized")
+```
+
+As asking for a raw matrix of standardised residuals produces an output with a lot of values, which is difficult to comprehend, we need to make it more human-readable. We want to detect variables that have many high standardised residuals. Let's get the absolute values of residuals and create a sum of standardised residuals for each item, and print them in a descending order.
+```{r, include=T, echo=FALSE}
+sr <- resid(model.fit, "standardized")
+sr <- as.data.frame(lapply(sr, as.data.frame)) #turn the list into data frame to enable operations on numericals
+#sr <- as.data.frame(sr)
+
+sr_readable <- sr[-1] # we want to keep numerical objects only so we remove the character string
+sr_readable <- round(sr_readable, digits = 5) #let's round the values, otherwise it's a mess
+sr_abs <- abs(sr_readable) 
+
+#
+sr_abs_pulled <- sapply(sr_abs, sum) #add them
+
+#pull the relevant objects into a data frame...
+troublemakers_names <- attributes(sr_abs_pulled)
+troublemakers_values <- as.numeric(sr_abs_pulled)
+troublemakers.df <- data.frame(troublemakers_names, troublemakers_values)
+
+#...and sort the values in a descending order
+#for the sum of residuals
+knitr::kable(troublemakers.df[order(-troublemakers.df$troublemakers_values), ], col.names = c("items", "value"), "simple")
+```
+
+The highest values are the most suspicious.
+
+### Model re-specification
+Let's respecify the model based on a step-wise deletion of indicators with the highest standardised residuals from the previous step, constrained by keeping an equal number of indicators in the 'double emotions' factors. Below is the final solution:
+
+```{r, include=T}
+model <- 'climate_anger =~ ICE.60.pl.ANG14 + ICE.60.pl.ANG13 + ICE.60.pl.ANG10 + ICE.60.pl.ANG3
+          climate_contempt =~ ICE.60.pl.DIS5 + ICE.60.pl.DIS7 + ICE.60.pl.IND2 + ICE.60.pl.IND13
+          climate_enthusiasm =~ ICE.60.pl.EMP12 + ICE.60.pl.HOPF9 + ICE.60.pl.HOPF8 + ICE.60.pl.EMP7
+          climate_powerlessness =~ ICE.60.pl.POWL11 + ICE.60.pl.POWL7 + ICE.60.pl.POWL2 + ICE.60.pl.POWL13
+          climate_guilt =~ ICE.60.pl.GUI11 + ICE.60.pl.GUI6 + ICE.60.pl.GUI8 + ICE.60.pl.GUI12
+          climate_isolation =~ ICE.60.pl.ISO4 + ICE.60.pl.ISO5 + ICE.60.pl.ISO8 + ICE.60.pl.ISO12
+          climate_anxiety =~ ICE.60.pl.APP7 + ICE.60.pl.HOPL5 + ICE.60.pl.HOPL11 + ICE.60.pl.APP14
+          climate_sorrow =~ ICE.60.pl.SOR13 + ICE.60.pl.SOR6 + ICE.60.pl.SOR4 + ICE.60.pl.SOR14'
+
+model.fit <- cfa(model, data = ICE_data, estimator = "MLM")
+```
+
+And its fit indices.
+```{r, include=T}
+lavaan::fitmeasures(model.fit, fit.measures = c("chisq.scaled", "pvalue.scaled", "df.scaled", "cfi.scaled", "tli.scaled", "rmsea.scaled", "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled", "srmr"))
+```
+The respecified model has improved. Fit indices indicate that now it fits the data very well.
+
+### Characteristics of the re-specified model {.tabset}
+Let's have a look at the characteristics of the respecified model
+
+#### Full model details
+```{r, include=T}
+lavaan::summary(model.fit, fit.measures = T, standardized = T)
+```
+All factor loadings are > .4.
+
+#### CFA: Convergent validity - AVE
+```{r, include=T, echo = F}
+knitr::kable(condisc(model.fit)$Average_Variance_Extracted, col.names = "AVE", "simple")
+```
+
+Climate powerlessness and climate enthusiasm do not meet the strict criteria for convergent validity: the average variance extracted (AVE) by the latent variables is greater than .5. 
+
+#### CFA: Discriminant validity
+```{r, include=F}
+#For the next steps, let's start from subsetting the data for the selected indicators.
+ICE_select <- c(
+          "ICE.60.pl.ANG14", "ICE.60.pl.ANG13", "ICE.60.pl.ANG10", "ICE.60.pl.ANG3",
+          "ICE.60.pl.DIS5", "ICE.60.pl.DIS7", "ICE.60.pl.IND2", "ICE.60.pl.IND13",
+          "ICE.60.pl.EMP12", "ICE.60.pl.HOPF9", "ICE.60.pl.HOPF8", "ICE.60.pl.EMP7",
+          "ICE.60.pl.POWL11", "ICE.60.pl.POWL7", "ICE.60.pl.POWL2", "ICE.60.pl.POWL13",
+          "ICE.60.pl.GUI11", "ICE.60.pl.GUI6", "ICE.60.pl.GUI8", "ICE.60.pl.GUI12",
+          "ICE.60.pl.ISO4", "ICE.60.pl.ISO5", "ICE.60.pl.ISO8", "ICE.60.pl.ISO12",
+          "ICE.60.pl.APP7", "ICE.60.pl.HOPL5", "ICE.60.pl.HOPL11", "ICE.60.pl.APP14",
+          "ICE.60.pl.SOR13", "ICE.60.pl.SOR6", "ICE.60.pl.SOR4", "ICE.60.pl.SOR14"
+                )
+
+ICE_data_short <- ICE_data[ICE_select]
+
+
+#And adding the values of latent factors to the data frame.
+
+ICE_data_short <- ICE_data_short %>% 
+  mutate(climate.anger = rowSums(.[1:4]), 
+         climate.contempt = rowSums(.[5:8]), 
+         climate.enthusiasm = rowSums(.[9:12]), 
+         climate.powerlessness = rowSums(.[13:16]), 
+         climate.guilt = rowSums(.[17:20]),
+         climate.isolation = rowSums(.[21:24]),
+         climate.anxiety = rowSums(.[25:28]),
+         climate.sorrow = rowSums(.[29:32]))
+```
+
+To gauge the discriminant validity of climate emotions in the CFA framework, let's compute mean correlations between latent variables and their indicators...
+```{r, echo = F}
+ang.m <- mean(cor(ICE_data_short[1:4], ICE_data_short$climate.anger))
+cont.m <- mean(cor(ICE_data_short[5:8], ICE_data_short$climate.contempt))
+enth.m <- mean(cor(ICE_data_short[9:12], ICE_data_short$climate.enthusiasm))
+powl.m <- mean(cor(ICE_data_short[13:16], ICE_data_short$climate.powerlessness))
+gui.m <- mean(cor(ICE_data_short[17:20], ICE_data_short$climate.guilt))
+iso.m <- mean(cor(ICE_data_short[21:24], ICE_data_short$climate.isolation))
+anx.m <- mean(cor(ICE_data_short[25:28], ICE_data_short$climate.anxiety))
+sor.m <- mean(cor(ICE_data_short[29:32], ICE_data_short$climate.sorrow))
+```
+
+...and the squared factor correlations between the latent variables
+```{r, echo = F}
+#print them in one output
+knitr::kable(data.frame(ang.m, cont.m, enth.m, powl.m, gui.m, iso.m, anx.m, sor.m), "simple")
+
+#together with the squared factor correlations
+knitr::kable(condisc(model.fit)$Squared_Factor_Correlation, "simple")
+```
+
+Climate powerlessness doesn't meet the strict criteria for discriminant validity (the average correlation between a latent variable and its indicators should be higher than the squared correlation between the latent variables).
+
+
+
+## Internal consistencies of climate emotions {.tabset}
+Let's compute the internal consistency of the factors using Raykov's rho & Cronbach's alpha.
+
+### Raykov's coefficient
+```{r, include=T, echo = F}
+raykovrho <- relicoef(model.fit)
+raykov.coefficient <- round(raykovrho$RRC, 2) #rounded
+clim.emotion <- c("climate_anger", "climate_contempt", "climate_enthusiasm", "climate_powerlessness", "climate_guilt", "climate_isolation", "climate_anxiety", "climate_sorrow")
+knitr::kable(cbind(clim.emotion, raykov.coefficient), "simple")
+```
+
+### Cronbach's alpha coefficient
+```{r, include=T, echo = F}
+knitr::kable(round(semTools::reliability(model.fit, what = "alpha"), 2), "simple")
+```
+
+Powerlessness is problematic again.
+
+## Associations with other variables
+```{r, include=F}
+#Prepare and inspect the data concerning other variables.
+s2.general <- dplyr::select(qdata, starts_with(c("CCA", "CCPS", "EAI", "HEAS", "IMB", "MPS", "PCAE", "PERS-S", "SDS")))
+```
+
+```{r, include=F}
+s2.general <- as.data.frame(s2.general)
+
+#change the variables type from character to numeric (keeping them in the data frame format)
+s2.general <- as.data.frame(lapply(s2.general, as.numeric))
+```
+
+
+```{r, include=F}
+#Explore & inspect the ICE data for consistency.
+#is there any missing data?
+sum(colSums(is.na(s2.general)))
+
+#a categorical representation of the data to check for inconsistent values
+#lapply(s2.general, table) # We won't print it here as it takes a lot of space
+```
+
+### Recoding the reversely scored items
+Certain items were reversely scored. We need to recode them.
+
+```{r, include=F}
+# For the descriptives, the response format should be 1-5 not 0-4, hence we add 1 to each value in the data frame
+s2.general <- s2.general + 1
+
+#but not for climate change beliefs scale as 0 on that scale means that somebody doesn't believe in climate change
+s2.general[,c(17:21)] <- s2.general[,c(17:21)] - 1
+```
+
+```{r, include=T}
+#####recode the reverse scored items
+
+# CPS: 5
+s2.general$CCPS.pl.4 <- 8 - s2.general$CCPS.pl.4
+
+#EAI: 2, 4, 6, 8, 10, 12, 14, 16
+cols <- c("EAI.pl.1", "EAI.pl.3", "EAI.pl.5", "EAI.pl.7", "EAI.pl.9", "EAI.pl.11", "EAI.pl.13", "EAI.pl.15")
+s2.general[,cols] <- 8 - s2.general[,cols]
+
+#IMB: 5, 8
+cols <- c("IMB.pl.4", "IMB.pl.7")
+s2.general[,cols] <- 8 - s2.general[,cols]
+```
+
+### Internal consitencies of other relevant scales
+Let's use Cronbach's alpha coefficient
+```{r, include=F, echo = F}
+CCAemo <- dplyr::select(s2.general, c(1:8))
+CCA_exp <- dplyr::select(s2.general, c(14:16))
+Clim_per <- dplyr::select(s2.general, c(17:21))
+Enjoi_nat <- dplyr::select(s2.general, c(22:23))
+Int_pol <- dplyr::select(s2.general, c(24:25))
+Conf_science <- dplyr::select(s2.general, c(26:27))
+Env_threat <- dplyr::select(s2.general, c(28:29))
+Hum_dom <- dplyr::select(s2.general, c(32:33))
+Hum_util <- dplyr::select(s2.general, c(34:35))
+Ecocentric <- dplyr::select(s2.general, c(36:37))
+Hogg_aff <- dplyr::select(s2.general, c(38:41))
+Hogg_impact <- dplyr::select(s2.general, c(48:50))
+Ind_mit <- dplyr::select(s2.general, c(51:60))
+Pol_mit <- dplyr::select(s2.general, c(61:65))
+Eff_self <- dplyr::select(s2.general, c(66:67))
+Eff_col <- dplyr::select(s2.general, c(68:69))
+Pers_glob <- dplyr::select(s2.general, c(70:87))
+Soc_des <- dplyr::select(s2.general, c(88:97))
+
+s_reliabilities_list <- list(CCAemo, CCA_exp, Clim_per, 
+                             Enjoi_nat, Int_pol, Conf_science,
+                             Env_threat, Hum_dom, Hum_util,
+                             Ecocentric,
+                             Hogg_aff, Hogg_impact,
+                             Ind_mit, Pol_mit,
+                             Eff_self, Eff_col,
+                             Pers_glob,
+                             Soc_des)
+
+compute.alpha.each.scale <- (lapply(s_reliabilities_list, psych::alpha, check.keys=TRUE))
+
+
+s_reliabilities <- sapply(compute.alpha.each.scale, "[[", 1)[1:2,]
+colnames(s_reliabilities) <- c("CCAemo", "CCA_exp", "Clim_per", 
+                               "Enjoi_nat", "Int_pol", "Conf_science",
+                               "Env_threat", "Hum_dom", "Hum_util",
+                               "Ecocentric",
+                               "Hogg_aff", "Hogg_impact",
+                               "Ind_mit", "Pol_mit",
+                               "Eff_self", "Eff_col",
+                               "Pers_glob",
+                               "Soc_des")
+```
+
+```{r, include=T, echo = F}
+knitr::kable(s_reliabilities, "simple")
+```
+
+#### Internal consistency for 2-item scales {.tabset}
+Cronbach's alpha for Ecocentric concern from the Environmental Attitudes Inventory was very low. Let's inspect it further with Spearman-Brown estimate, which is better for two-item scales than Cronbach's alpha coefficient (https://pubmed.ncbi.nlm.nih.gov/23089674/).
+```{r, include=T, echo = F}
+rNuggets::spearman_brown(Ecocentric, items = c("EAI.pl.14", "EAI.pl.15"), SB_only = FALSE) #still the coef is very low...
+
+#is everything ok with the responses?
+#lapply(Ecocentric, table)  # Yes, it seems so
+```
+We accept that this scale has a very low internal consistency in this study.
+
+But let's actually compute the Spearman-Brown estimate of internal consistency for other 2-item scales too
+
+##### Enjoyment of nature
+```{r, include=T, echo = F}
+rNuggets::spearman_brown(as.data.frame(Enjoi_nat), items = c("EAI.pl.0", "EAI.pl.1"), SB_only = FALSE)
+```
+
+##### Interventionist policy support
+```{r, include=T, echo = F}
+rNuggets::spearman_brown(as.data.frame(Int_pol), items = c("EAI.pl.2", "EAI.pl.3"), SB_only = FALSE)
+```
+
+##### Confidence in science & tech
+```{r, include=T, echo = F}
+rNuggets::spearman_brown(as.data.frame(Conf_science), items = c("EAI.pl.4", "EAI.pl.5"), SB_only = FALSE)
+```
+
+##### Environmental threat
+```{r, include=T, echo = F}
+rNuggets::spearman_brown(as.data.frame(Env_threat), items = c("EAI.pl.6", "EAI.pl.7"), SB_only = FALSE)
+```
+
+##### Human dominance over nature
+```{r, include=T, echo = F}
+rNuggets::spearman_brown(as.data.frame(Hum_dom), items = c("EAI.pl.10", "EAI.pl.11"), SB_only = FALSE)
+```
+
+##### Human utilisation of nature
+```{r, include=T, echo = F}
+rNuggets::spearman_brown(as.data.frame(Hum_util), items = c("EAI.pl.12", "EAI.pl.13"), SB_only = FALSE)
+```
+
+##### Climate action self-efficacy
+```{r, include=T, echo = F}
+rNuggets::spearman_brown(as.data.frame(Eff_self), items = c("PCAE.pl.0", "PCAE.pl.1"), SB_only = FALSE)
+```
+
+##### Climate action collective-efficacy
+```{r, include=T, echo = F}
+rNuggets::spearman_brown(as.data.frame(Eff_col), items = c("PCAE.pl.2", "PCAE.pl.3"), SB_only = FALSE)
+```
+
+
+### Descriptives of all study variables
+
+```{r, include=F}
+#Now, let's create a data frame with the means of global and dimensional results for each scale included in #the analysis.
+s2.glob_dim <- data.frame(clim.anx.glob = rowSums(s2.general[1:13])/13, 
+                          clim.anx.cog_emo = rowSums(s2.general[1:8])/8, 
+                          clim.anx.funt = rowSums(s2.general[9:13])/5,
+                          clim.experience = rowSums(s2.general[14:16])/3,
+                          clim.belief.gl = rowSums(s2.general[17:21])/5,
+                          EAI.enjoy.nature = rowSums(s2.general[22:23])/2,
+                          EAI.supp.interv.policy = rowSums(s2.general[24:25])/2,
+                          EAI.conf.science.tech = rowSums(s2.general[26:27])/2,
+                          EAI.env.threat = rowSums(s2.general[28:29])/2,
+                          EAI.pers.cons.beh = rowSums(s2.general[30:31])/2,
+                          EAI.hum.dom = rowSums(s2.general[32:33])/2,
+                          EAI.hum.util.nat = rowSums(s2.general[34:35]/2),
+                          EAI.ecocentric.conc = rowSums(s2.general[36:37])/2,
+                          Hogg.glob = rowSums(s2.general[38:50])/13,
+                          Hogg.affective = rowSums(s2.general[38:41])/4,
+                          Hogg.rumination = rowSums(s2.general[42:44])/3,
+                          Hogg.beh.sympt = rowSums(s2.general[45:47])/3,
+                          Hogg.anx.pers.impact = rowSums(s2.general[48:50])/3,
+                          ind.mit.glob = rowSums(s2.general[51:60])/10,
+                          mit.policy.supp = rowSums(s2.general[61:65])/5,
+                          clim.act.efficacy.glob = rowSums(s2.general[66:69])/4,
+                          clim.act.efficacy.self = rowSums(s2.general[66:67])/2,
+                          clim.act.efficacy.collective = rowSums(s2.general[68:69])/2,
+                          PERS.glob  = rowSums(s2.general[70:87])/18,
+                          PERS.neg.affectivity  = rowSums(s2.general[c(71, 73, 75, 77, 79, 81, 83, 85, 87)])/9,
+                          PERS.pos.affectivity  = rowSums(s2.general[c(70, 72, 74, 76, 78, 80, 82, 84, 86)])/9,
+                          social.desirability.glob  = rowSums(s2.general[88:97])/10
+                          )
+
+
+#add ICE scales to this data frame
+#but first, change total scores to mean
+ICE_scales_means <- ICE_data_short[,33:40]/4
+
+s2.all <- cbind(s2.glob_dim, ICE_scales_means)
+s2.selected <- s2.all[,c(2, 4, 5, 6:9, 11:13, 15, 18, 19, 20, 22:24, 27, 28:35)]
+colnames(s2.selected) <- c("Climate axniety: cognitive-emotional", "Personal experience of cc", "Climate change beliefs", "EAI: enjoyment of nature", "EAI: support for policy", "EAI: confidence in science & tech", "EAI: environmental threat", "EAI: human dominance", "EAI: human utilisation", "EAI: ecocentric concern", "Hogg eco-anxiety: affective", "Hogg eco-anxiety: personal impact", "Individual mitigation", "Mitigation policy support", "Climate action efficacy: self", "Climate action efficacy: collective", "Emotional reactivity", "Social desirability", "Climate anger", "Climate contempt", "Climate enthusiasm", "Climate powerlessness", "Climate guilt", "Climate isolation", "Climate anxiety", "Climate sorrow")
+```
+
+Let's have a look at the descriptives for each scale.
+```{r, include=T, echo=F}
+knitr::kable(psych::describe(s2.selected), "simple")
+```
+
+### Distribution of other variables {.tabset}
+
+Inspect the distribution of the variables.
+
+#### Formal test
+```{r, echo = F}
+#formal inspection with the Shapiro-Wilk test
+lapply(s2.selected, shapiro.test)
+```
+
+For all but two variables p < .05 (except social desirability and PERS glob)
+so we have a reason to believe that most of our variables depart from normal distribution
+
+#### Visual inspection
+```{r, echo = F}
+#scale the data so that the graphs can be displayed together
+data.scaled <- scale(s2.selected)
+
+data.gathered <- data.scaled %>%
+  as_tibble() %>%
+  select_if(is.numeric) %>%
+  gather(key = "variable", value = "value")
+
+ggplot(data.gathered, aes(value)) +
+  geom_density(fill = "lightgrey") +
+  facet_wrap(~variable)
+```
+
+### Correlations {.tabset}
+It's time to compute the correlation coefficients. As the data deviates from the normal distribution and because it is ordinal anyways, let's use Spearman correlation coefficients.
+
+I will use the custom correlation_matrix function from Paul van der Laken
+(https://paulvanderlaken.com/2020/07/28/publication-ready-correlation-matrix-significance-r/#correlation_matrix)
+
+#### Climate emotions inter-correlations
+```{r, include=T, echo = F}
+knitr::kable(correlation_matrix(ICE_scales_means, type = "spearman", digits = 2, use = 'lower', replace_diagonal = T), "simple")
+```
+
+```{r, include=F}
+#save the output to copy it to the paper
+#save_correlation_matrix(ICE_scales_means, filename = "inter_correlations.csv", type = "spearman", digits = 2, use = 'lower', replace_diagonal = T)
+```
+
+#### Correlations with other variables
+
+```{r, include=T, echo = F}
+knitr::kable(correlation_matrix(s2.selected, type = "spearman", digits = 2, use = 'lower', replace_diagonal = T), "simple")
+```
+
+```{r, include=F}
+#save the output to copy it to the paper
+#save_correlation_matrix(s2.all[,c(2, 4, 5, 6:9, 11:13, 15, 18, 19, 20, 22:24, 27, 28:35)], filename = "concurrent.csv", type = "spearman", digits = 2, use = 'upper', replace_diagonal = T)
+```
+
+```{r, include=F, echo = F}
+##
+#It's time to include demographic data in the analysis
+
+#Subset demographic data
+
+dems <- dplyr::select(qdata, starts_with("demo"))
+dems <- as.data.frame(dems)
+
+#inspect the data
+#lapply(dems, table)
+
+#rename the variables so that it's easier to navigate
+colnames(dems) <- c("cc_concern", "gender", "yearOfbirth", "country", "language1", "area", "education", "any_views", "any_l_r", "perceived_SES", "politicalViews", "second_lang", "edu_other_specify", "gender_other_specify")
+
+#add dems to s2.all for later analysis
+s2.all <- cbind(s2.all, dems)
+
+###decribe the demographics more for the paper - means etc
+
+#Gender
+table(dems$gender)
+17800/300  #percentage of women in the sample
+
+#Age
+age <- 2022 - as.numeric(dems$yearOfbirth)
+psych::describe(age)
+
+s2.all <- cbind(s2.all, age)
+s2.all["age_group"] <- cut(s2.all$age, c(0, 23, 35, 55, Inf), c("genZ", "millennial", "genX", "boomer"), include.lowest=TRUE)
+
+prop.table(table(s2.all$age_group))*100
+
+# urban vs rural
+round(prop.table(table(dems$area))*100, 0)
+
+#0 - "The suburbs or outskirts of a big city"
+# 1- "A town or a small city"
+# 2 - "A country village"
+# 3- "A farm or home in the countryside")
+# urban: big city, suburbs of a big city, small city or town; sum up
+
+# educational attainment
+round(prop.table(table(as.numeric(dems$`demo-0-pl.8`)))*100, 0)
+
+# climate change concern
+prop.table(table(dems$cc_concern))*100
+
+# perceived SES
+prop.table(table(dems$perceived_SES))*100
+
+# 0 - "Living comfortably on present income"
+# 1 - "Coping on present income"
+# 2 - "Finding it difficult on present income"
+# 3 - "Finding it very difficult on present income"
+```
+
+## Discriminant validity {.tabset}
+
+Let's check if the scores on the ICE scales differ between groups that are expected to differ.
+
+### Different levels of concern
+Groups presenting different levels of climate change concern.
+
+```{r, include=F}
+s2.all$concern <- as.character(s2.all$cc_concern)
+
+## subset the data for the analysis
+somewhat.concerned <- s2.all %>% 
+  dplyr::filter(cc_concern == 2)
+
+very.concerned <- s2.all %>% 
+  dplyr::filter(cc_concern == 3)
+
+#merge the above dataframes
+concern.discriminant <- rbind(somewhat.concerned, very.concerned)
+
+#retain only concern and climate emotion values
+concern.discriminant <- dplyr::select(concern.discriminant, c(28:36))
+```
+Let's start from generating a plot to get an overview of the inter-group differences.
+
+```{r, include=F}
+#change the format of the data
+concern.data.plot <- gather(concern.discriminant, emotion, value, climate.anger:climate.sorrow, factor_key=TRUE)
+```
+
+```{r, include=T, echo = F}
+ggplot(concern.data.plot, aes(x=emotion, y=value, fill=cc_concern)) + 
+  #geom_boxplot() +
+  geom_violin(trim = T) +
+  geom_boxplot(width = .1, position=position_dodge(.9), outlier.shape = NA) +
+  stat_boxplot(geom ='errorbar', position=position_dodge(.9)) +
+  labs(title = "B", x="", y = "Response") +
+  scale_x_discrete(labels = c('climate \nanger', 'climate \ncontempt', 'climate \nenthusiasm', 'climate \npowerlessness', 'climate \nguilt', 'climate \nisolation', 'climate \nanxiety', 'climate \nsorrow')) +
+  scale_fill_grey(start = 1,
+                  end = .8,
+                  name="Climate change concern",
+                      breaks=c("2", "3"),
+                      labels=c("Somewhat concerned", "Very concerned")) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size=12)) +
+  theme(axis.text.y = element_text(size=12)) +
+  theme(legend.title = element_text(size=14, face="bold")) +
+  theme(legend.text = element_text(size = 12)) +
+  theme(legend.position="bottom") +
+  scale_y_continuous(breaks = seq(0,5,1), limits=c(1, 5.3))
+```
+
+Time for a formal test.
+```{r, include=F}
+#subset the data for the formal test
+emo.only <- dplyr::select(concern.discriminant, c(1:8))
+```
+
+Since the data deviates from normal distribution, let's use non-parametric multivariate analysis of variance (NPMANOVA), also known as permutational multivariate analysis of variance (PERMANOVA).
+The hypothesis we're testing is that climate emotions together are affected by the difference in level of climate change concern.
+
+```{r, include=T, echo = F}
+vegan::adonis2(emo.only ~ concern.discriminant$cc_concern, method = "bray",
+       permutations = 999)
+```
+
+The null hypothesis of no differences in emotions between genders is strongly rejected. Note: the p-value is an empirical p-value. With 999 permutations, a p-value of 0.001 is the “most significant” result we can obtain. The independent grouping variable simultaneously explains a statistically significant amount of variance in the dependent variable.
+
+However, prior to concluding that a significant PERMANOVA test implies that the observed differences are in fact significant, we need to carry out another test: a test of homogeneity of dispersion - an analysis of multivariate homogeneity of group dispersions (variances), a multivariate analogue of Levene’s test for homogeneity of variances. 
+
+```{r, include=T, echo = F}
+emo.dist <- vegdist(emo.only, method="bray")
+dispersion <- betadisper(emo.dist, group=concern.discriminant$cc_concern)
+permutest(dispersion)
+
+#let's also plot the dispersion to make it more intuitive
+plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
+```
+
+But which differences exactly are driving the overall difference between genders? We can answer this question using the approximative (Monte Carlo) Fisher-Pitman test
+# https://www.researchgate.net/publication/11312045_The_Fisher-Pitman_Permutation_Test_An_Attractive_Alternative_to_the_F_Test
+```{r, include=T, echo = F}
+lapply(concern.discriminant[, c("climate.anger", "climate.contempt", "climate.enthusiasm", "climate.powerlessness", "climate.guilt", "climate.isolation", "climate.anxiety", "climate.sorrow")], 
+       function(x) coin::pvalue(oneway_test(x ~ as.factor(cc_concern), data = concern.discriminant, 
+                                            distribution = approximate(nresample = 9999))))
+```
+
+But which differences exactly are driving the overall difference between genders? We can answer this question using the approximative (Monte Carlo) Fisher-Pitman test
+# https://www.researchgate.net/publication/11312045_The_Fisher-Pitman_Permutation_Test_An_Attractive_Alternative_to_the_F_Test
+```{r, include=T, echo = F}
+lapply(concern.discriminant[, c("climate.anger", "climate.contempt", "climate.enthusiasm", "climate.powerlessness", "climate.guilt", "climate.isolation", "climate.anxiety", "climate.sorrow")], 
+       function(x) coin::pvalue(oneway_test(x ~ as.factor(cc_concern), data = concern.discriminant, 
+                                            distribution = approximate(nresample = 9999))))
+```
+
+To control for false discovery rate, let's adjust the empirical p-values with the Benjamini-Hochberg correction
+(#Westfall, P. H., & Young, S. S. (1993). Resampling-based multiple testing: Examples and methods for p-value adjustment (Vol. 279). John Wiley & Sons).
+```{r, include=T, echo = F}
+p.adjust(c(0.00010001, 0.00010001, 0.00220022, 0.3910391, 0.00050005, 0.1214121, 0.00010001, 0.00010001), method = "BH")
+```
+
+### Genders
+Now, let's have a look at differences between men and women.
+```{r, include=F}
+s2.all$gender <- as.character(s2.all$gender)
+
+## subset the data for the analysis
+female <- s2.all %>% 
+  dplyr::filter(gender == 0)
+
+male <- s2.all %>% 
+  dplyr::filter(gender == 1)
+
+#merge the above dataframes
+gender.discriminant <- rbind(female, male)
+
+#retain only concern and climate emotion values
+gender.discriminant <- dplyr::select(gender.discriminant, c(28:35, 37))
+
+#let's first generate a grouped boxplot to get an overview
+
+#change the format of the data
+gender.data.plot <- gather(gender.discriminant, emotion, value, climate.anger:climate.sorrow, factor_key=TRUE)
+```
+
+Let's start from plotting the data to get an overview.
+
+```{r, include=T, echo = F}
+ggplot(gender.data.plot, aes(x=emotion, y=value, fill=gender)) + 
+  #geom_boxplot() +
+  geom_violin(trim = T) +
+  geom_boxplot(width = .1, position=position_dodge(.9), outlier.shape = NA) +
+  stat_boxplot(geom ='errorbar', position=position_dodge(.9)) +
+  labs(title = "A", x="", y = "Response") +
+  scale_x_discrete(labels = c('climate \nanger', 'climate \ncontempt', 'climate \nenthusiasm', 'climate \npowerlessness', 'climate \nguilt', 'climate \nisolation', 'climate \nanxiety', 'climate \nsorrow')) +
+  scale_fill_grey(start = 1,
+                  end = .8,
+                  name="Gender",
+                  breaks=c("0", "1"),
+                  labels=c("Female", "Male")) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size=12)) +
+  theme(axis.text.y = element_text(size=12)) +
+  theme(legend.title = element_text(size=14, face="bold")) +
+  theme(legend.text = element_text(size = 12)) +
+  theme(legend.position="bottom") +
+  scale_y_continuous(breaks = seq(0,5,1), limits=c(1, 5.3))
+```
+
+Now, let's do a formal test, repeating the steps from the comparison between different levels of concern for climate change.
+```{r, include=F}
+#subset the data for the formal test
+emo.only_gender <- dplyr::select(gender.discriminant, c(1:8))
+```
+
+```{r, include=T, echo = F}
+vegan::adonis2(emo.only_gender ~ gender.discriminant$gender, method = "bray",
+                               permutations = 999)
+```
+
+The null hypothesis of no differences in emotions between genders is strongly rejected. To conclude that a significant PERMANOVA test implies that the observed differences are in fact significant, we need to carry out a test of homogeneity of dispersion. 
+
+```{r, include=T, echo = F}
+emo.dist_gender <- vegdist(emo.only_gender, method="bray")
+dispersion_gender <- betadisper(emo.dist_gender, group=gender.discriminant$gender)
+permutest(dispersion_gender)
+
+#again, let's plot it
+plot(dispersion_gender, hull=FALSE, ellipse=TRUE) ##sd ellipse
+```
+Which differences exactly are driving the overall difference between levels of concern?
+```{r, include=T, echo = F}
+lapply(gender.discriminant[, c("climate.anger", "climate.contempt", "climate.enthusiasm", "climate.powerlessness", "climate.guilt", "climate.isolation", "climate.anxiety", "climate.sorrow")], 
+                      function(x) coin::pvalue(oneway_test(x ~ as.factor(gender), data = gender.discriminant, 
+                                                           distribution = approximate(nresample = 9999))))
+```
+Let's adjust the empirical p-values with the Benjamini-Hochberg correction.
+```{r, include=T, echo = F}
+p.adjust(c(0.00710071, 0.00010001, 0.0010001, 0.06620662, 0.00010001, 0.04710471, 0.00010001, 0.00010001), method = "BH")
+```
+
+
+```{r, include=F}
+## add significance levels to plots and save them in one figure for the paper
+dicr.violin.concern <- ggplot(concern.data.plot, aes(x=emotion, y=value, fill=cc_concern)) + 
+  #geom_boxplot() +
+  geom_violin(trim = T) +
+  geom_boxplot(width = .1, position=position_dodge(.9), outlier.shape = NA) +
+  stat_boxplot(geom ='errorbar', position=position_dodge(.9)) +
+  labs(title = "B", x="", y = "Response") +
+  scale_x_discrete(labels = c('climate \nanger', 'climate \ncontempt', 'climate \nenthusiasm', 'climate \npowerlessness', 'climate \nguilt', 'climate \nisolation', 'climate \nanxiety', 'climate \nsorrow')) +
+  geom_signif(y_position = 5.3, xmin=c(.9), xmax=c(1.1), annotation="***", vjust= 0.5) +
+  geom_signif(y_position = 5.3, xmin=c(1.9), xmax=c(2.1), annotation="***", vjust= 0.5) +
+  geom_signif(y_position = 5.3, xmin=c(2.9), xmax=c(3.1), annotation="**", vjust= 0.5) +
+  geom_signif(y_position = 5.3, xmin=c(3.9), xmax=c(4.1), annotation=".39", vjust= 0.1) +
+  geom_signif(y_position = 5.3, xmin=c(4.9), xmax=c(5.1), annotation="***", vjust= 0.5) +
+  geom_signif(y_position = 5.3, xmin=c(5.9), xmax=c(6.1), annotation=".14", vjust= 0.1) +
+  geom_signif(y_position = 5.3, xmin=c(6.9), xmax=c(7.1), annotation="***", vjust= 0.5) +
+  geom_signif(y_position = 5.3, xmin=c(7.9), xmax=c(8.1), annotation="***", vjust= 0.5) +
+  scale_fill_grey(start = 1,
+                  end = .8,
+                  name="Climate change concern",
+                      breaks=c("2", "3"),
+                      labels=c("Somewhat concerned", "Very concerned")) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size=12)) +
+  theme(axis.text.y = element_text(size=12)) +
+  theme(legend.title = element_text(size=14, face="bold")) +
+  theme(legend.text = element_text(size = 12)) +
+  theme(legend.position="bottom") +
+  scale_y_continuous(breaks = seq(0,5,1), limits=c(1, 5.3))
+
+dicr.violin.gender <- ggplot(gender.data.plot, aes(x=emotion, y=value, fill=gender)) + 
+  #geom_boxplot() +
+  geom_violin(trim = T) +
+  geom_boxplot(width = .1, position=position_dodge(.9), outlier.shape = NA) +
+  stat_boxplot(geom ='errorbar', position=position_dodge(.9)) +
+  labs(title = "A", x="", y = "Response") +
+  scale_x_discrete(labels = c('climate \nanger', 'climate \ncontempt', 'climate \nenthusiasm', 'climate \npowerlessness', 'climate \nguilt', 'climate \nisolation', 'climate \nanxiety', 'climate \nsorrow')) +
+  geom_signif(y_position = 5.3, xmin=c(.9), xmax=c(1.1), annotation="**", vjust= 0.5) +
+  geom_signif(y_position = 5.3, xmin=c(1.9), xmax=c(2.1), annotation="***", vjust= 0.5) +
+  geom_signif(y_position = 5.3, xmin=c(2.9), xmax=c(3.1), annotation="**", vjust= 0.5) +
+  geom_signif(y_position = 5.3, xmin=c(3.9), xmax=c(4.1), annotation=".07", vjust= 0.1) +
+  geom_signif(y_position = 5.3, xmin=c(4.9), xmax=c(5.1), annotation="***", vjust= 0.5) +
+  geom_signif(y_position = 5.3, xmin=c(5.9), xmax=c(6.1), annotation=".05", vjust= 0.1) +
+  geom_signif(y_position = 5.3, xmin=c(6.9), xmax=c(7.1), annotation="***", vjust= 0.5) +
+  geom_signif(y_position = 5.3, xmin=c(7.9), xmax=c(8.1), annotation="***", vjust= 0.5) +
+  scale_fill_grey(start = 1,
+                  end = .8,
+                  name="Gender",
+                  breaks=c("0", "1"),
+                  labels=c("Female", "Male")) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size=12)) +
+  theme(axis.text.y = element_text(size=12)) +
+  theme(legend.title = element_text(size=14, face="bold")) +
+  theme(legend.text = element_text(size = 12)) +
+  theme(legend.position="bottom") +
+  scale_y_continuous(breaks = seq(0,5,1), limits=c(1, 5.3))
+
+fig1 <- gridExtra::grid.arrange(dicr.violin.gender, dicr.violin.concern, nrow=2)
+
+#save the output
+#ggsave(fig1, file="Fig1_final.png" , width=10, height=8)
+```
+
+## Note
+This html output presents the general logic of the analysis along with some results not outlined in the main body of the manuscript. Please note that the full R code for the data cleaning and data analysis is available in the supplementary materials on the accompanying OSF website.
