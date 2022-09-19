@@ -24,18 +24,18 @@ library(stringr)
 ```
 
 ```{r include=FALSE}
-source('01.R')
-source('02.R')
+source('./S1/01.R')
+source('./S1/02.R')
 ```
 
-```{r child = '03-EFA.Rmd'}
-
-```
-
-```{r child = '04-reliability.Rmd'}
+```{r child = "S1/03-EFA.Rmd"}
 
 ```
 
-```{r child = if (params$factors == 7) '05-questionnaire.Rmd'}
+```{r child = 'S1/04-reliability.Rmd'}
+
+```
+
+```{r child = if (params$factors == 7) 'S1/05-questionnaire.Rmd'}
 
 ```

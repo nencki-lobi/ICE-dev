@@ -4,9 +4,9 @@ library('tidyr')
 ## Load data
 
 # Across all data sources, each participant can be uniquely identified by `token`
-input1 = read.table("./01/input/176496/results-survey176496.csv", header = T, sep = ",", encoding = "UTF-8") # general population dataset 1 (recruited by the company)
-input2 = read.table("./01/input/381735/results-survey381735.csv", header = T, sep = ",", encoding = "UTF-8") # general population dataset 2 (recruited by the company)
-input3 = read.table("./01/input/977613/results-survey977613.csv", header = T, sep = ",", encoding = "UTF-8") # activists' dataset
+input1 = read.table("./S1/01/input/176496/results-survey176496.csv", header = T, sep = ",", encoding = "UTF-8") # general population dataset 1 (recruited by the company)
+input2 = read.table("./S1/01/input/381735/results-survey381735.csv", header = T, sep = ",", encoding = "UTF-8") # general population dataset 2 (recruited by the company)
+input3 = read.table("./S1/01/input/977613/results-survey977613.csv", header = T, sep = ",", encoding = "UTF-8") # activists' dataset
 
 # Remove duplicated tokens (test participants), keep the last entry
 input1 = filter(input1, !duplicated(input1['token'], fromLast = T))
@@ -23,7 +23,7 @@ df = rbind(input1[,c(6, 7, 14:206)], # token, timestamp, data
 
 df = df %>% rename(ts = startdate)
 
-save(df, file = "./01/input/dataset.RData")
+save(df, file = "./S1/01/input/dataset.RData")
 
 ## Get activists' data
 
@@ -49,8 +49,8 @@ data1$CC = recode(data1$CC, "W ogóle się tym nie martwię" = 0,
 
 ## Get company data needed for quality control (applicable to general population data only)
 
-recruited1 = read.table("./01/input/176496/recruited.csv", skip = 1, sep = ";", encoding = "UTF-8")
-recruited2 = read.table("./01/input/381735/recruited.csv", skip = 1, sep = ";", encoding = "UTF-8")
+recruited1 = read.table("./S1/01/input/176496/recruited.csv", skip = 1, sep = ";", encoding = "UTF-8")
+recruited2 = read.table("./S1/01/input/381735/recruited.csv", skip = 1, sep = ";", encoding = "UTF-8")
 
 data2 = rbind(recruited1, recruited2)
 data2 = data2[,c(3,12,4,6)]
@@ -97,4 +97,4 @@ sprintf('Final sample size: N = %d', nrow(data)+nrow(activists)) # final sample 
 subjects = rbind(data[,c("token", "ts")],
                  activists[,c("token", "ts")])
 
-save(subjects, file = "./01/output/subjects.RData")
+save(subjects, file = "./S1/01/output/subjects.RData")

@@ -3,11 +3,11 @@ library('tidyr')
 
 ## Load data
 
-load(file = "./01/input/dataset.RData")
+load(file = "./S1/01/input/dataset.RData")
 
 ## Load subjects
 
-load(file = "./01/output/subjects.RData")
+load(file = "./S1/01/output/subjects.RData")
 
 ## List of questionnaires
 
@@ -20,7 +20,7 @@ questionnaires = NULL
 
 for (i in 1:nquest) {
   fname = paste(qnames[i], ".tsv", sep="")
-  items = read.table(file.path("./02/input",fname), header = F, sep = "\t", quote = "", encoding = "UTF-8")
+  items = read.table(file.path("./S1/02/input",fname), header = F, sep = "\t", quote = "", encoding = "UTF-8")
   
   header = c("PL","EN","code") ## FIXIT
   colnames(items) = header[1:ncol(items)]
@@ -73,4 +73,4 @@ colnames(qdata)[idx] = newcolnames
 ## Save output
 
 save(questionnaires, qdata, subjects, code_to_pl, code_to_en, code_to_block, 
-     file = "./02/output/dataset.RData")
+     file = "./S1/02/output/dataset.RData")

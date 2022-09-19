@@ -20,13 +20,13 @@ To reproduce the analysis for a given number of factors, run:
 * 7 factors solution (see the HTML report [here](https://github.com/nencki-lobi/ICE-dev-S1/tree/main/S1_data_analysis_report_7_factors.html)):
 
 ```
-rmarkdown::render("main.Rmd", output_file = "S1_data_analysis_report_7_factors.html", params = list(factors = 7))
+rmarkdown::render("S1_data_analysis.Rmd", output_file = "S1_data_analysis_report_7_factors.html", params = list(factors = 7))
 ```
 
 * 11 factors solution (see the HTML report [here](https://github.com/nencki-lobi/ICE-dev-S1/tree/main/S1_data_analysis_report_11_factors.html)):
 
 ```
-rmarkdown::render("main.Rmd", output_file = "S1_data_analysis_report_11_factors.html", params = list(factors = 11))
+rmarkdown::render("S1_data_analysis.Rmd", output_file = "S1_data_analysis_report_11_factors.html", params = list(factors = 11))
 ```
 
 ## Requirements
