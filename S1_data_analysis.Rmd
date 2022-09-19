@@ -24,8 +24,8 @@ library(stringr)
 ```
 
 ```{r include=FALSE}
-source('./S1/01.R')
-source('./S1/02.R')
+source('./S1/01-quality-control.R')
+source('./S1/02-preprocessing.R')
 ```
 
 ```{r child = "S1/03-EFA.Rmd"}
