@@ -1512,7 +1512,7 @@ div.tocify {
 <h1 class="title toc-ignore">ICE Development - Study 2 - data
 analysis</h1>
 <h4 class="author">Michalina Marczak</h4>
-<h4 class="date">Last compiled on 19 September, 2022</h4>
+<h4 class="date">Last compiled on 23 September, 2022</h4>
 
 </div>
 
@@ -1624,10 +1624,10 @@ need to use MLR because we have complete data); Let’s inspect the fit
 indices.</p>
 <pre class="r"><code>model.fit &lt;- cfa(model, data = ICE_data, estimator = &quot;MLM&quot;)
 lavaan::fitmeasures(model.fit, fit.measures = c(&quot;chisq.scaled&quot;, &quot;pvalue.scaled&quot;, &quot;df.scaled&quot;, &quot;cfi.scaled&quot;, &quot;tli.scaled&quot;, &quot;rmsea.scaled&quot;, &quot;rmsea.ci.lower.scaled&quot;, &quot;rmsea.ci.upper.scaled&quot;, &quot;srmr&quot;))</code></pre>
-<pre><code>##          chisq.scaled         pvalue.scaled             df.scaled            cfi.scaled            tli.scaled 
-##              2660.368                 0.000              1682.000                 0.884                 0.878 
-##          rmsea.scaled rmsea.ci.lower.scaled rmsea.ci.upper.scaled                  srmr 
-##                 0.044                 0.041                 0.047                 0.091</code></pre>
+<pre><code>##          chisq.scaled         pvalue.scaled             df.scaled            cfi.scaled            tli.scaled          rmsea.scaled 
+##              2660.368                 0.000              1682.000                 0.884                 0.878                 0.044 
+## rmsea.ci.lower.scaled rmsea.ci.upper.scaled                  srmr 
+##                 0.041                 0.047                 0.091</code></pre>
 <p>Fit indices indicate room for improvement.</p>
 </div>
 <div id="localised-areas-of-strain" class="section level3">
@@ -1971,10 +1971,10 @@ emotions’ factors. Below is the final solution:</p>
 model.fit &lt;- cfa(model, data = ICE_data, estimator = &quot;MLM&quot;)</code></pre>
 <p>And its fit indices.</p>
 <pre class="r"><code>lavaan::fitmeasures(model.fit, fit.measures = c(&quot;chisq.scaled&quot;, &quot;pvalue.scaled&quot;, &quot;df.scaled&quot;, &quot;cfi.scaled&quot;, &quot;tli.scaled&quot;, &quot;rmsea.scaled&quot;, &quot;rmsea.ci.lower.scaled&quot;, &quot;rmsea.ci.upper.scaled&quot;, &quot;srmr&quot;))</code></pre>
-<pre><code>##          chisq.scaled         pvalue.scaled             df.scaled            cfi.scaled            tli.scaled 
-##               527.967                 0.002               436.000                 0.973                 0.970 
-##          rmsea.scaled rmsea.ci.lower.scaled rmsea.ci.upper.scaled                  srmr 
-##                 0.027                 0.018                 0.033                 0.050</code></pre>
+<pre><code>##          chisq.scaled         pvalue.scaled             df.scaled            cfi.scaled            tli.scaled          rmsea.scaled 
+##               527.967                 0.002               436.000                 0.973                 0.970                 0.027 
+## rmsea.ci.lower.scaled rmsea.ci.upper.scaled                  srmr 
+##                 0.018                 0.033                 0.050</code></pre>
 <p>The respecified model has improved. Fit indices indicate that now it
 fits the data very well.</p>
 </div>
@@ -4407,8 +4407,7 @@ correction.</p>
 <p>This HTML output presents the general logic of the analysis along
 with some results not outlined in the main body of the manuscript.
 Please note that the full R code for the data cleaning and data analysis
-is available in the supplementary materials on the accompanying OSF
-website.</p>
+is available in the supplementary materials on the accompanying <a href="https://osf.io/78d6u">OSF website</a>.</p>
 </div>
 
 
