@@ -1,6 +1,6 @@
 # Inventory of Climate Emotions (ICE) development
 
-This repository contains supplementary materials (data and code) associated with the manuscript describing the development of the Inventory of Climate Emotions (ICE). The remaining supplementary materials accompanying this publication can be found here.
+This repository contains supplementary materials (data and code) associated with the manuscript describing the development of the Inventory of Climate Emotions (ICE). The remaining supplementary materials can be found on the accompanying [OSF website](https://osf.io/78d6u).
 
 Please cite the corresponding publication when using these materials:
 
