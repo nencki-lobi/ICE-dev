@@ -24,9 +24,9 @@ library("openxlsx")
 # ORDER BY s.sid, q.name, a.ord"
 # 
 # df = dbGetQuery(con, query)
-# save(df, file = "./01/input/dataset.RData")
+# save(df, file = "./S3/01/input/dataset.RData")
 
-load(file = "./01/input/dataset.RData")
+load(file = "./S3/01/input/dataset.RData")
 
 ## Get data needed for quality control
 
@@ -49,11 +49,11 @@ data1 = data1 %>% mutate(across(5:10, as.integer))
 
 ## Get previously acquired data needed for quality control
 
-input1 = read.table("./01/input/176496/results-survey176496.csv", header = T, sep = ",", encoding = "UTF-8")
-input2 = read.table("./01/input/381735/results-survey381735.csv", header = T, sep = ",", encoding = "UTF-8")
+input1 = read.table("./S3/01/input/176496/results-survey176496.csv", header = T, sep = ",", encoding = "UTF-8")
+input2 = read.table("./S3/01/input/381735/results-survey381735.csv", header = T, sep = ",", encoding = "UTF-8")
 
-tokens1 = read.xlsx("./01/input/176496/tokens-survey176496.xlsx", cols = c(3,4))
-tokens2 = read.xlsx("./01/input/381735/tokens-survey381735.xlsx", cols = c(3,4))
+tokens1 = read.xlsx("./S3/01/input/176496/tokens-survey176496.xlsx", cols = c(3,4))
+tokens2 = read.xlsx("./S3/01/input/381735/tokens-survey381735.xlsx", cols = c(3,4))
 
 tokens = rbind(tokens1, tokens2)
 colnames(tokens) = c("token", "rid")
@@ -113,4 +113,4 @@ sprintf('Final sample size: N = %d', nrow(data)) # final sample size
 ## Save output
 
 subjects = data[,c("sid", "code", "rid", "token", "ts")]
-save(subjects, file = "./01/output/subjects.RData")
+save(subjects, file = "./S3/01/output/subjects.RData")

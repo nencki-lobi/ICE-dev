@@ -23,9 +23,9 @@ library('tidyr')
 # ORDER BY s.sid, q.name, a.ord"
 # 
 # df = dbGetQuery(con, query)
-# save(df, file = "./01/input/dataset.RData")
+# save(df, file = "./S2/01/input/dataset.RData")
 
-load(file = "./01/input/dataset.RData")
+load(file = "./S2/01/input/dataset.RData")
 
 ## Get data needed for quality control
 
@@ -50,7 +50,7 @@ data1$age = 2022 - data1$birth
 
 ## Get company data needed for quality control
 
-data2 = read.table("./01/input/recruited.csv", header = T, sep = ",", encoding = "UTF-8")
+data2 = read.table("./S2/01/input/recruited.csv", header = T, sep = ",", encoding = "UTF-8")
 data2 = data2[,c(3,12,4,6)]
 
 colnames(data2) = c("rid", "CC", "sex", "age")
@@ -98,4 +98,4 @@ sprintf('Final sample size: N = %d', nrow(data)) # final sample size
 ## Save output
 
 subjects = data[,c("sid", "code", "rid")]
-save(subjects, file = "./01/output/subjects.RData")
+save(subjects, file = "./S2/01/output/subjects.RData")
