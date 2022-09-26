@@ -203,16 +203,16 @@ psych::describe(ICE_data)
 ```
 ## Inspecting the climate emotions data
 
-### Distributions of climate emotions data {.tabset}
-Let's check the assumptions for Confirmatory Factor Analysis (CFA): multi- & uni-variate normality check. We will perform formal tests: Mardia's test for multivariate skewness and kurtosis & Shapiro-Wilk for univariate normality, as well as a graphical inspection.
+### Distributions of climate emotions data
+Let's check the assumptions for Confirmatory Factor Analysis (CFA): multi- & uni-variate normality check. We will perform formal tests: Mardia's test for multivariate skewness and kurtosis & Shapiro-Wilk for univariate normality.
 
 #### Formal tests
 ```{r, include=T, echo=F}
 mvnormalTest::mardia(ICE_data, std = TRUE) #both Mardia’s test for multivariate skewness and kurtosis & Shapiro-Wilk for univariate normality are available with this call
 ```
 
-#### Graphical inspection
-```{r, echo = F}
+
+```{r, include=F, echo = F}
 #additional visual exploration
 theme_set(
   theme_minimal() +
@@ -229,7 +229,7 @@ ggplot(ICE.gathered, aes(value)) +
   facet_wrap(~variable)
 ```
 
-The values from the formal tests imply that we should reject the null hypotheses of uni- & multivariate normality. The plots corroborate the observation of univariate non-normality.
+The values from the formal tests imply that we should reject the null hypotheses of uni- & multivariate normality.
 
 ## Confirmatory Factor Analysis
 
