@@ -4,7 +4,7 @@ This repository contains supplementary materials (data and code) associated with
 
 Please cite the corresponding publication when using these materials:
 
-> Marczak, M., Wierzba, M., Zaremba, D., Kulesza, M., Szczypiński, J., Kossowski, B., Budziszewska, M., Michałowski, J., Klöckner, C.A., & Marchewka A. (2022) *Beyond Climate Anxiety: Development and Validation of the Inventory of Climate Emotions (ICE), a Measure of Various Emotions Experienced in Relation to Climate Change.*
+> Marczak, M., Wierzba, M., Zaremba, D., Kulesza, M., Szczypiński, J., Kossowski, B., Budziszewska, M., Michałowski, J., Klöckner, C.A., & Marchewka A. (2022) *Beyond Climate Anxiety: Development and Validation of the Inventory of Climate Emotions (ICE), a Measure of Various Emotions Experienced in Relation to Climate Change.* PsyArXiv. [https://doi.org/10.31234/osf.io/s9gzb](https://doi.org/10.31234/osf.io/s9gzb)
 
 ## Contents
 
