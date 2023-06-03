@@ -44,7 +44,7 @@ rmarkdown::render("S3_data_analysis.Rmd", output_file = "S3_data_analysis_report
 
 ## Requirements
 
-The following R packages are required: `astatur`, `car`, `coin`, `dplyr`, `gdata`, `ggsignif`, `gridExtra`, `Hmisc`, `knitr`,  `lavaan`, `mvnormalTest`, `psych`, `rNuggets`, `rptR`, `semTools`, `stats`, `stringr`, `tidyr`, `tidySEM`, `tidyverse`, `vegan`.
+The following R packages are required: `astatur`, `car`, `coin`, `corrtable`, `gdata`, `ggsignif`, `gridExtra`, `Hmisc`, `knitr`,  `lavaan`, `mvnormalTest`, `psych`, `rNuggets`, `rptR`, `semTools`, `stats`, `tidyr`, `tidySEM`, `tidyverse`, `vegan`.
 
 Optional, but useful for working with PostgreSQL databases: `RPostgreSQL`.
 

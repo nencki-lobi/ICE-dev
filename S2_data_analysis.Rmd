@@ -15,16 +15,13 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ```{r, include=F}
-#set the global options
+# set the global options
 options(max.print=999999)  #allows printing out large outputs
 options(scipen = 999)       #disables scientific notation (uses decimal instead) 
 set.seed(9999) # set seed for replicability
 
-# LIBRARIES
-
 ####### load the packages needed for data analysis 
 library(tidyverse)
-library(dplyr)
 library(psych)
 library(mvnormalTest)
 library(Hmisc)
@@ -40,143 +37,12 @@ library(vegan)
 library(coin)
 library(gdata)
 library(rNuggets) #remotes::install_github("LukasWallrich/rNuggets")
-
-# CUSTOM FUNCTIONS
-#the first tw are from Paul van der Laken (https://paulvanderlaken.com/2020/07/28/publication-ready-correlation-matrix-significance-r/#correlation_matrix), and the last one is from Mehmet Mehmetoglu.
-
-#' correlation_matrix
-#' Creates a publication-ready / formatted correlation matrix, using `Hmisc::rcorr` in the backend.
-#'
-#' @param df dataframe; containing numeric and/or logical columns to calculate correlations for
-#' @param type character; specifies the type of correlations to compute; gets passed to `Hmisc::rcorr`; options are `"pearson"` or `"spearman"`; defaults to `"pearson"`
-#' @param digits integer/double; number of decimals to show in the correlation matrix; gets passed to `formatC`; defaults to `3`
-#' @param decimal.mark character; which decimal.mark to use; gets passed to `formatC`; defaults to `.`
-#' @param use character; which part of the correlation matrix to display; options are `"all"`, `"upper"`, `"lower"`; defaults to `"all"`
-#' @param show_significance boolean; whether to add `*` to represent the significance levels for the correlations; defaults to `TRUE`
-#' @param replace_diagonal boolean; whether to replace the correlations on the diagonal; defaults to `FALSE`
-#' @param replacement character; what to replace the diagonal and/or upper/lower triangles with; defaults to `""` (empty string)
-#'
-#' @return a correlation matrix
-#' @export
-#'
-#' @examples
-#' `correlation_matrix(iris)`
-#' `correlation_matrix(mtcars)`
-correlation_matrix <- function(df, 
-                               type = "pearson",
-                               digits = 3, 
-                               decimal.mark = ".",
-                               use = "all", 
-                               show_significance = TRUE, 
-                               replace_diagonal = FALSE, 
-                               replacement = ""){
-  
-  # check arguments
-  stopifnot({
-    is.numeric(digits)
-    digits >= 0
-    use %in% c("all", "upper", "lower")
-    is.logical(replace_diagonal)
-    is.logical(show_significance)
-    is.character(replacement)
-  })
-  # we need the Hmisc package for this
-  require(Hmisc)
-  
-  # retain only numeric and boolean columns
-  isNumericOrBoolean = vapply(df, function(x) is.numeric(x) | is.logical(x), logical(1))
-  if (sum(!isNumericOrBoolean) > 0) {
-    cat('Dropping non-numeric/-boolean column(s):', paste(names(isNumericOrBoolean)[!isNumericOrBoolean], collapse = ', '), '\n\n')
-  }
-  df = df[isNumericOrBoolean]
-  
-  # transform input data frame to matrix
-  x <- as.matrix(df)
-  
-  # run correlation analysis using Hmisc package
-  correlation_matrix <- Hmisc::rcorr(x, type = type)
-  R <- correlation_matrix$r # Matrix of correlation coeficients
-  p <- correlation_matrix$P # Matrix of p-value 
-  
-  # transform correlations to specific character format
-  Rformatted = formatC(R, format = 'f', digits = digits, decimal.mark = decimal.mark)
-  
-  # if there are any negative numbers, we want to put a space before the positives to align all
-  if (sum(!is.na(R) & R < 0) > 0) {
-    Rformatted = ifelse(!is.na(R) & R > 0, paste0(" ", Rformatted), Rformatted)
-  }
-
-  # add significance levels if desired
-  if (show_significance) {
-    # define notions for significance levels; spacing is important.
-    stars <- ifelse(is.na(p), "", ifelse(p < .001, "***", ifelse(p < .01, "**", ifelse(p < .05, "*", ""))))
-    Rformatted = paste0(Rformatted, stars)
-  }
-  
-  # make all character strings equally long
-  max_length = max(nchar(Rformatted))
-  Rformatted = vapply(Rformatted, function(x) {
-    current_length = nchar(x)
-    difference = max_length - current_length
-    return(paste0(x, paste(rep(" ", difference), collapse = ''), sep = ''))
-  }, FUN.VALUE = character(1))
-  
-  # build a new matrix that includes the formatted correlations and their significance stars
-  Rnew <- matrix(Rformatted, ncol = ncol(x))
-  rownames(Rnew) <- colnames(Rnew) <- colnames(x)
-  
-  # replace undesired values
-  if (use == 'upper') {
-    Rnew[lower.tri(Rnew, diag = replace_diagonal)] <- replacement
-  } else if (use == 'lower') {
-    Rnew[upper.tri(Rnew, diag = replace_diagonal)] <- replacement
-  } else if (replace_diagonal) {
-    diag(Rnew) <- replacement
-  }
-  
-  return(Rnew)
-}
-
-
-#' save_correlation_matrix
-#' Creates and save to file a fully formatted correlation matrix, using `correlation_matrix` and `Hmisc::rcorr` in the backend
-#' @param df dataframe; passed to `correlation_matrix`
-#' @param filename either a character string naming a file or a connection open for writing. "" indicates output to the console; passed to `write.csv`
-#' @param ... any other arguments passed to `correlation_matrix`
-#'
-#' @return NULL
-#'
-#' @examples
-#' `save_correlation_matrix(df = iris, filename = 'iris-correlation-matrix.csv')`
-#' `save_correlation_matrix(df = mtcars, filename = 'mtcars-correlation-matrix.csv', digits = 3, use = 'lower')`
-save_correlation_matrix = function(df, filename, ...) {
-  return(write.csv2(correlation_matrix(df, ...), file = filename))
-}
-
-condisc <- function(x){
-  std.loadings<- inspect(x, what="std")$lambda
-  #std.loadings
-  std.loadings[std.loadings==0] <- NA
-  #std.loadings
-  std.loadings <- std.loadings^2
-  #std.loadings
-  ave <- colMeans(std.loadings, na.rm=TRUE)
-  #ave
-  #factor correlation matrix
-  fcor <- lavInspect(x, "cor.lv")
-  #fcor
-  sqfcor <- fcor^2
-  #sqfcor
-  list(Squared_Factor_Correlation=round(sqfcor, digits=3),
-       Average_Variance_Extracted=round(ave, digits=3))
-}
-
+library(corrtable)
 ```
 
 ```{r, include=F}
 load("./S2/02/output/dataset.RData")
-```
-```{r, include=F}
+
 data.for.CFA <- dplyr::select(qdata, starts_with("ICE-60"))
 ```
 
@@ -499,25 +365,29 @@ knitr::kable(s_reliabilities, "simple")
 ```
 
 #### Internal consistency for 2-item scales {.tabset}
-Cronbach's alpha for Ecocentric concern from the Environmental Attitudes Inventory was very low. Let's inspect it further with Spearman-Brown estimate, which is better for two-item scales than Cronbach's alpha coefficient (https://pubmed.ncbi.nlm.nih.gov/23089674/).
+Cronbach's alpha for Ecocentric concern and Interventionist policy support from the Environmental Attitudes Inventory were low. Let's inspect them further with Spearman-Brown estimate, which is better for two-item scales than Cronbach's alpha coefficient (https://pubmed.ncbi.nlm.nih.gov/23089674/).
+
+Econcentric concern:
 ```{r, include=T, echo = F}
 rNuggets::spearman_brown(Ecocentric, items = c("EAI.pl.14", "EAI.pl.15"), SB_only = FALSE) #still the coef is very low...
 
 #is everything ok with the responses?
 #lapply(Ecocentric, table)  # Yes, it seems so
 ```
-We accept that this scale has a very low internal consistency in this study.
 
-But let's actually compute the Spearman-Brown estimate of internal consistency for other 2-item scales too
+Interventionist policy support:
+```{r, include=T, echo = F}
+rNuggets::spearman_brown(as.data.frame(Int_pol), items = c("EAI.pl.2", "EAI.pl.3"), SB_only = FALSE)
+```
+
+Despite low internal consistency, we decided to include these two variables in the analyses because they capture essential dimensions of environmental attitudes that are highly relevant to our study. This decision was made in light of the psychometric arguments that internal consistency is not the sole criterion for scale reliability and it is important to consider other aspects, such as content validity, construct validity, and the theoretical framework [(DeVellis and Thorpe 2021)](https://books.google.fr/books?hl=en&lr=&id=QddDEAAAQBAJ&oi=fnd&pg=PP13&dq=Scale+Development:+Theory+and+Applications.+devellis&ots=OElCFKJOac&sig=A130D8q3CtDAt1vCm_pCPVVGzgQ&redir_esc=y#v=onepage&q=Scale%20Development%3A%20Theory%20and%20Applications.%20devellis&f=false). Low internal consistency can often be observed in multidimensional scales or scales consisting of a small number of items, which is the case with this measure. At the same time, the two scales in question have been widely used in previous research and have demonstrated meaningful associations with relevant variables, providing evidence of their conceptual relevance. Thus, wee accept that these scales have low internal consistency in our study.
+
+
+Let's actually compute the Spearman-Brown estimate of internal consistency for other 2-item scales too
 
 ##### Enjoyment of nature
 ```{r, include=T, echo = F}
 rNuggets::spearman_brown(as.data.frame(Enjoi_nat), items = c("EAI.pl.0", "EAI.pl.1"), SB_only = FALSE)
-```
-
-##### Interventionist policy support
-```{r, include=T, echo = F}
-rNuggets::spearman_brown(as.data.frame(Int_pol), items = c("EAI.pl.2", "EAI.pl.3"), SB_only = FALSE)
 ```
 
 ##### Confidence in science & tech
@@ -598,6 +468,41 @@ Let's have a look at the descriptives for each scale.
 ```{r, include=T, echo=F}
 knitr::kable(psych::describe(s2.selected), "simple")
 ```
+
+Graphical representation of the distribution of climate emotions
+
+```{r, include=F}
+
+#retain only relevant values
+emo.fig <- dplyr::select(s2.selected, c(19:26))
+
+#change the format of the data
+emo.fig <- gather(emo.fig, emotion, value, factor_key=TRUE)
+```
+
+
+```{r, include=T, echo = F}
+fig_general <- ggplot(emo.fig, aes(x=emotion, y=value)) + 
+  #geom_boxplot() +
+  geom_violin(trim = T) +
+  geom_boxplot(width = .1, position=position_dodge(.9), outlier.shape = NA) +
+  stat_boxplot(geom ='errorbar', position=position_dodge(.9)) +
+  labs(x="", y = "Response") +
+  scale_x_discrete(labels = c('climate \nanger', 'climate \ncontempt', 'climate \nenthusiasm', 'climate \npowerlessness', 'climate \nguilt', 'climate \nisolation', 'climate \nanxiety', 'climate \nsorrow')) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size=12)) +
+  theme(axis.text.y = element_text(size=12)) +
+  theme(legend.title = element_text(size=14, face="bold")) +
+  theme(legend.text = element_text(size = 12)) +
+  scale_y_continuous(breaks = seq(0,5,1), limits=c(1, 5.3))
+
+fig_general
+
+#ggsave(fig_general, file="Fig_general.png" , width=10, height=8)
+```
+
+
+
 
 ### Distribution of other variables {.tabset}
 
@@ -719,30 +624,48 @@ Let's check if the scores on the ICE scales differ between groups that are expec
 Groups presenting different levels of climate change concern.
 
 ```{r, include=F}
-s2.all$concern <- as.character(s2.all$cc_concern)
+s2.all$concern <- as.numeric(s2.all$cc_concern)
 
-## subset the data for the analysis
-somewhat.concerned <- s2.all %>% 
-  dplyr::filter(cc_concern == 2)
+#Let's split according to median
 
-very.concerned <- s2.all %>% 
-  dplyr::filter(cc_concern == 3)
+#Calculate median value
+MedianValue <- median(s2.all$concern)
+
+#And now let's split it:
+LowCC <- s2.all[s2.all$concern <= MedianValue,]
+HighCC <- s2.all[s2.all$concern > MedianValue,]
+
+#Add a column to each df to mark the 'high' and 'low' concern
+concern.group <- rep("low", length(LowCC$concern))
+LowCC <- cbind(LowCC, concern.group)
+
+concern.group <- rep("high", length(HighCC$concern))
+HighCC <- cbind(HighCC, concern.group)
 
 #merge the above dataframes
-concern.discriminant <- rbind(somewhat.concerned, very.concerned)
+concern.discriminant <- rbind(LowCC, HighCC)
 
 #retain only concern and climate emotion values
-concern.discriminant <- dplyr::select(concern.discriminant, c(28:36))
+concern.discriminant <- dplyr::select(concern.discriminant, c(28:35, "concern.group"))
 ```
+
 Let's start from generating a plot to get an overview of the inter-group differences.
 
 ```{r, include=F}
-#change the format of the data
-concern.data.plot <- gather(concern.discriminant, emotion, value, climate.anger:climate.sorrow, factor_key=TRUE)
+concern.data.plot <- tidyr::gather(concern.discriminant, emotion, value, climate.anger:climate.sorrow, factor_key=TRUE) ##change the format of the data
+
+
+#reorder the names in the concern.group vector so that "low" will be displayed first
+concern.data.plot$concern.group <- as.factor(concern.data.plot$concern.group)
+concern.data.plot$concern.group <- relevel(concern.data.plot$concern.group, "low")
+
+concern.data.plot$emotion<-factor(concern.data.plot$emotion, c("climate.anger", "climate.contempt", "climate.enthusiasm", "climate.powerlessness", "climate.guilt", "climate.isolation", "climate.anxiety","climate.sorrow"))
+
 ```
 
+
 ```{r, include=T, echo = F}
-ggplot(concern.data.plot, aes(x=emotion, y=value, fill=cc_concern)) + 
+ggplot(concern.data.plot, aes(x=emotion, y=value, fill=concern.group)) + 
   #geom_boxplot() +
   geom_violin(trim = T) +
   geom_boxplot(width = .1, position=position_dodge(.9), outlier.shape = NA) +
@@ -752,8 +675,8 @@ ggplot(concern.data.plot, aes(x=emotion, y=value, fill=cc_concern)) +
   scale_fill_grey(start = 1,
                   end = .8,
                   name="Climate change concern",
-                      breaks=c("2", "3"),
-                      labels=c("Somewhat concerned", "Very concerned")) +
+                      #breaks=c("low", "high"),
+                      labels=c("Low concern", "High concern")) +
   theme_classic() +
   theme(axis.text.x = element_text(size=12)) +
   theme(axis.text.y = element_text(size=12)) +
@@ -770,10 +693,10 @@ emo.only <- dplyr::select(concern.discriminant, c(1:8))
 ```
 
 Since the data deviates from normal distribution, let's use non-parametric multivariate analysis of variance (NPMANOVA), also known as permutational multivariate analysis of variance (PERMANOVA).
-The hypothesis we're testing is that climate emotions together are affected by the difference in level of climate change concern.
+The hypothesis we're testing is that climate emotions together are affected by the difference in the level of climate change concern.
 
 ```{r, include=T, echo = F}
-vegan::adonis2(emo.only ~ concern.discriminant$cc_concern, method = "bray",
+vegan::adonis2(emo.only ~ concern.discriminant$concern.group, method = "bray",
        permutations = 999)
 ```
 
@@ -782,35 +705,28 @@ The null hypothesis of no differences in emotions between genders is strongly re
 However, prior to concluding that a significant PERMANOVA test implies that the observed differences are in fact significant, we need to carry out another test: a test of homogeneity of dispersion - an analysis of multivariate homogeneity of group dispersions (variances), a multivariate analogue of Levene’s test for homogeneity of variances. 
 
 ```{r, include=T, echo = F}
-emo.dist <- vegdist(emo.only, method="bray")
-dispersion <- betadisper(emo.dist, group=concern.discriminant$cc_concern)
+emo.dist <- vegan::vegdist(emo.only, method="bray")
+dispersion <- vegan::betadisper(emo.dist, group=concern.discriminant$concern.group)
 permutest(dispersion)
 
-#let's also plot the dispersion to make it more intuitive
+#let's  plot the dispersion to make it more intuitive
 plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
 ```
 
-But which differences exactly are driving the overall difference between genders? We can answer this question using the approximative (Monte Carlo) Fisher-Pitman test
+But which differences exactly are driving the overall difference between levels of concern about climate change? We can answer this question using the approximative (Monte Carlo) Fisher-Pitman test
 # https://www.researchgate.net/publication/11312045_The_Fisher-Pitman_Permutation_Test_An_Attractive_Alternative_to_the_F_Test
 ```{r, include=T, echo = F}
 lapply(concern.discriminant[, c("climate.anger", "climate.contempt", "climate.enthusiasm", "climate.powerlessness", "climate.guilt", "climate.isolation", "climate.anxiety", "climate.sorrow")], 
-       function(x) coin::pvalue(oneway_test(x ~ as.factor(cc_concern), data = concern.discriminant, 
-                                            distribution = approximate(nresample = 9999))))
-```
-
-But which differences exactly are driving the overall difference between genders? We can answer this question using the approximative (Monte Carlo) Fisher-Pitman test
-# https://www.researchgate.net/publication/11312045_The_Fisher-Pitman_Permutation_Test_An_Attractive_Alternative_to_the_F_Test
-```{r, include=T, echo = F}
-lapply(concern.discriminant[, c("climate.anger", "climate.contempt", "climate.enthusiasm", "climate.powerlessness", "climate.guilt", "climate.isolation", "climate.anxiety", "climate.sorrow")], 
-       function(x) coin::pvalue(oneway_test(x ~ as.factor(cc_concern), data = concern.discriminant, 
-                                            distribution = approximate(nresample = 9999))))
+       function(x) coin::pvalue(coin::oneway_test(x ~ as.factor(concern.group), data = concern.discriminant, 
+                                            distribution = coin::approximate(nresample = 9999))))
 ```
 
 To control for false discovery rate, let's adjust the empirical p-values with the Benjamini-Hochberg correction
 (#Westfall, P. H., & Young, S. S. (1993). Resampling-based multiple testing: Examples and methods for p-value adjustment (Vol. 279). John Wiley & Sons).
 ```{r, include=T, echo = F}
-p.adjust(c(0.00010001, 0.00010001, 0.00220022, 0.3910391, 0.00050005, 0.1214121, 0.00010001, 0.00010001), method = "BH")
+p.adjust(c(0.00010001, 0.00010001, 0.00010001, 0.05050505, 0.00010001, 0.00010001, 0.00010001, 0.00010001), method = "BH")
 ```
+
 
 ### Genders
 Now, let's have a look at differences between men and women.
@@ -828,7 +744,7 @@ male <- s2.all %>%
 gender.discriminant <- rbind(female, male)
 
 #retain only concern and climate emotion values
-gender.discriminant <- dplyr::select(gender.discriminant, c(28:35, 37))
+gender.discriminant <- dplyr::select(gender.discriminant, c(28:35, "gender"))
 
 #let's first generate a grouped boxplot to get an overview
 
@@ -860,7 +776,7 @@ ggplot(gender.data.plot, aes(x=emotion, y=value, fill=gender)) +
   scale_y_continuous(breaks = seq(0,5,1), limits=c(1, 5.3))
 ```
 
-Now, let's do a formal test, repeating the steps from the comparison between different levels of concern for climate change.
+Now, let's do a formal test, repeating the steps from the comparison between different levels of concern for climate change, but this time for gender.
 ```{r, include=F}
 #subset the data for the formal test
 emo.only_gender <- dplyr::select(gender.discriminant, c(1:8))
@@ -893,9 +809,10 @@ p.adjust(c(0.00710071, 0.00010001, 0.0010001, 0.06620662, 0.00010001, 0.04710471
 ```
 
 
+
 ```{r, include=F}
 ## add significance levels to plots and save them in one figure for the paper
-dicr.violin.concern <- ggplot(concern.data.plot, aes(x=emotion, y=value, fill=cc_concern)) + 
+dicr.violin.concern <- ggplot(concern.data.plot, aes(x=emotion, y=value, fill=concern.group)) + 
   #geom_boxplot() +
   geom_violin(trim = T) +
   geom_boxplot(width = .1, position=position_dodge(.9), outlier.shape = NA) +
@@ -904,17 +821,17 @@ dicr.violin.concern <- ggplot(concern.data.plot, aes(x=emotion, y=value, fill=cc
   scale_x_discrete(labels = c('climate \nanger', 'climate \ncontempt', 'climate \nenthusiasm', 'climate \npowerlessness', 'climate \nguilt', 'climate \nisolation', 'climate \nanxiety', 'climate \nsorrow')) +
   geom_signif(y_position = 5.3, xmin=c(.9), xmax=c(1.1), annotation="***", vjust= 0.5) +
   geom_signif(y_position = 5.3, xmin=c(1.9), xmax=c(2.1), annotation="***", vjust= 0.5) +
-  geom_signif(y_position = 5.3, xmin=c(2.9), xmax=c(3.1), annotation="**", vjust= 0.5) +
-  geom_signif(y_position = 5.3, xmin=c(3.9), xmax=c(4.1), annotation=".39", vjust= 0.1) +
+  geom_signif(y_position = 5.3, xmin=c(2.9), xmax=c(3.1), annotation="***", vjust= 0.5) +
+  geom_signif(y_position = 5.3, xmin=c(3.9), xmax=c(4.1), annotation=".05", vjust= 0.1) +
   geom_signif(y_position = 5.3, xmin=c(4.9), xmax=c(5.1), annotation="***", vjust= 0.5) +
-  geom_signif(y_position = 5.3, xmin=c(5.9), xmax=c(6.1), annotation=".14", vjust= 0.1) +
+  geom_signif(y_position = 5.3, xmin=c(5.9), xmax=c(6.1), annotation="***", vjust= 0.1) +
   geom_signif(y_position = 5.3, xmin=c(6.9), xmax=c(7.1), annotation="***", vjust= 0.5) +
   geom_signif(y_position = 5.3, xmin=c(7.9), xmax=c(8.1), annotation="***", vjust= 0.5) +
   scale_fill_grey(start = 1,
                   end = .8,
                   name="Climate change concern",
-                      breaks=c("2", "3"),
-                      labels=c("Somewhat concerned", "Very concerned")) +
+                      #breaks=c("2", "3"),
+                      labels=c("Low concern", "High concern")) +
   theme_classic() +
   theme(axis.text.x = element_text(size=12)) +
   theme(axis.text.y = element_text(size=12)) +

@@ -1,0 +1,112 @@
+## Initial climate emotions & demographics
+
+```{r, include=FALSE}
+# Set options
+options(max.print=999999)  # allows printing out large outputs
+options(scipen = 999)      # disables scientific notation (uses decimal instead)
+```
+
+```{r, include=FALSE, echo = FALSE, warning=FALSE}
+# Load data
+load("./02/output/dataset.RData")
+
+# Subset ICE-60 data
+ICE60 = read.table("./05/output/questionnaire.tsv", header = F, sep = "\t",  quote = "\"", encoding = "UTF-8")
+colnames(ICE60) = c("PL", "EN", "code")
+
+dataset = qdata %>%
+  rename_with(~ sub("ICE-168-pl.", "", .x), everything()) %>% # drop prefix
+  select("token",ICE60$code)
+
+# Remove whitespace and recode
+dataset = as.data.frame(apply(dataset,2,str_trim))
+
+dataset = dataset %>%
+  mutate_at(vars(-("token")), list(~dplyr::recode(.,
+                           "Zdecydowanie nie" = 1,
+                           "Raczej nie" = 2,
+                           "Ani tak, ani nie" = 3,
+                           "Raczej tak" = 4,
+                           "Zdecydowanie tak" = 5)))
+
+# Calculate summary scores for ICE initial subscales
+ICE60.scores = dataset %>%
+  mutate("Climate Anger" = rowSums(select(., starts_with('ANG'))),
+         "Climate Contempt" = rowSums(select(., starts_with(c('DIS','IND')))),
+         "Climate Enthusiasm" = rowSums(select(., starts_with(c('EMP','HOPF')))),
+         "Climate Powerlessness" = rowSums(select(., starts_with('POWL'))),
+         "Climate Guilt" = rowSums(select(., starts_with('GUI'))),
+         "Climate Isolation" = rowSums(select(., starts_with('ISO'))),
+         "Climate Anxiety" = rowSums(select(., starts_with(c('APP','HOPL')))),
+         "Climate Sorrow" = rowSums(select(., starts_with('SOR')))) %>%
+  select("token", starts_with('climate'))
+
+# Subset demographic vars of interest
+dems = qdata %>%
+  select(c("token","GENDER", "AGE", "CITY", "EDUCATION", "CC5")) %>%
+  rename(BIRTH = AGE, CONCERN = CC5) 
+
+#dems %>% map(table)
+
+# Recode and filter out unnecessary cases
+dems = dems %>% 
+  mutate(GENDER = recode(GENDER, "Kobieta" = 0,
+                                 "Mężczyzna" = 1,
+                         .default = 99)) %>%
+  filter(GENDER != 99) %>% # remove participants with non-binary gender
+  mutate(AGE = 2021 - BIRTH, .before = BIRTH) %>% # calculate age based on year of birth
+  select(-BIRTH) %>%
+  mutate(CITY = recode(CITY, "Duże miasto" = 0,
+                       "Przedmieścia lub obrzeża dużego miasta" = 1,
+                       "Średnie lub małe miasto" = 2,
+                       "Wieś" = 3,
+                       "Pojedyncze gospodarstwo lub dom na terenie wiejskim" = 4)) %>%
+  mutate(EDUCATION = recode(EDUCATION, "Podstawowe" = 0,
+                            "Gimnazjalne" = 1,
+                            "Zawodowe lub zasadnicze zawodowe" = 2,
+                            "Średnie" = 3,
+                            "Dyplom licencjacki lub dyplom inżynierski" = 4,
+                            "Dyplom magistra lub dyplom lekarza" = 5,
+                            "Stopień naukowy doktora, doktora habilitowanego lub tytuł profesora" = 6,
+                            .default = 99)) %>%
+  filter(EDUCATION != 99) %>% # remove participants with other education level
+  mutate(CONCERN = recode(CONCERN, "W ogóle się tym nie martwię" = 0,
+                          "Niezbyt się martwię" = 1,
+                          "Trochę się martwię" = 2,
+                          "Bardzo się martwię" = 3,
+                          "Niezwykle się tym martwię" = 4)) %>%
+  rename("Gender" = GENDER, 
+         "Age" = AGE,
+         "Area of residence" = CITY,
+         "Educational attainment" = EDUCATION,
+         "Climate change concern" = CONCERN)
+
+dems %>% map(table)
+
+df_for_cors = merge(x = dems, y = ICE60.scores, by = "token", all = TRUE) %>%
+  select(-token) # drop token
+```
+
+
+```{r, include=TRUE, echo = FALSE, warning=FALSE}
+# Correlation matrix
+mat = correlation_matrix(df_for_cors, 
+                         type = "spearman", 
+                         digits = 2, 
+                         use = 'lower', 
+                         replace_diagonal = T)
+```
+
+Correlations between initial ICE subscales are as follows:
+
+```{r, include=TRUE, echo = FALSE, warning=FALSE}
+kable(mat[6:13, 6:13], "simple") # correlations between ICE subscales
+```
+
+Correlation between initial ICE subscales and demographics are as follows:
+
+```{r, include=TRUE, echo = FALSE, warning=FALSE}
+kable(mat[6:13, 1:5], "simple") # correlations of ICE subscales with demographics
+```
+
+Note: **Gender**: 0 - female, 1 - male; **Area of residence**: 0 - "A big city", 1 - "The suburbs or outskirts of a big city", 2 - "A town or a small city", 3 - "A country village", 4 - "A farm or home in the countryside"; **Educational attainment**: 0 - elementary school, 1 - junior high school, 2 - vocational training, 3 - high school, 4 - bachelor/engineer diploma, 5 - master or medical doctor diploma, 6 - PhD or professor title; **Climate change concern**: 0 - "Not at all concerned", 1 - "Not very concerned", 2 - "Somewhat concerned", 3 - "Very concerned", 4 - "Extremely concerned".
