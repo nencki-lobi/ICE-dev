@@ -97,13 +97,13 @@ mat = correlation_matrix(df_for_cors,
                          replace_diagonal = T)
 ```
 
-Correlations between initial ICE subscales are as follows:
+Correlations between the initial ICE subscales are as follows:
 
 ```{r, include=TRUE, echo = FALSE, warning=FALSE}
 kable(mat[6:13, 6:13], "simple") # correlations between ICE subscales
 ```
 
-Correlation between initial ICE subscales and demographics are as follows:
+Correlations between the initial ICE subscales and demographics are as follows:
 
 ```{r, include=TRUE, echo = FALSE, warning=FALSE}
 kable(mat[6:13, 1:5], "simple") # correlations of ICE subscales with demographics
