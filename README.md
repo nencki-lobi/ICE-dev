@@ -4,19 +4,17 @@ This repository contains supplementary materials (data and code) associated with
 
 Please cite the corresponding publication when using these materials:
 
-> Marczak, M., Wierzba, M., Zaremba, D., Kulesza, M., Szczypiński, J., Kossowski, B., Budziszewska, M., Michałowski, J., Klöckner, C.A., & Marchewka A. (2022) *Beyond Climate Anxiety: Development and Validation of the Inventory of Climate Emotions (ICE), a Measure of Various Emotions Experienced in Relation to Climate Change.* PsyArXiv. [https://doi.org/10.31234/osf.io/s9gzb](https://doi.org/10.31234/osf.io/s9gzb)
+> Marczak, M., Wierzba, M., Zaremba, D., Kulesza, M., Szczypiński, J., Kossowski, B., Budziszewska, M., Michałowski, J., Klöckner, C.A., & Marchewka A. (2023). *Beyond climate anxiety: Development and validation of the Inventory of Climate Emotions (ICE): A measure of multiple emotions experienced in relation to climate change.* Global Environmental Change, 83, 102764. [https://doi.org/10.1016/j.gloenvcha.2023.102764](https://doi.org/10.1016/j.gloenvcha.2023.102764)
 
 ## Contents
 
-This repository contains data and code for the Studies 1-3 described in the manuscript, including:
+This repository contains data and code for the Studies 1-2 described in the manuscript, including:
 * Study 1: [raw data](https://github.com/nencki-lobi/ICE-dev/tree/main/S1/01/input) | [cleaned data](https://github.com/nencki-lobi/ICE-dev/tree/main/S1/02/output) | [analysis code](https://github.com/nencki-lobi/ICE-dev/tree/main/S1_data_analysis.Rmd)
 * Study 2: [raw data](https://github.com/nencki-lobi/ICE-dev/tree/main/S2/01/input) | [cleaned data](https://github.com/nencki-lobi/ICE-dev/tree/main/S2/02/output) | [analysis code](https://github.com/nencki-lobi/ICE-dev/tree/main/S2_data_analysis.Rmd)
-* Study 3: [raw data](https://github.com/nencki-lobi/ICE-dev/tree/main/S3/01/input) | [cleaned data](https://github.com/nencki-lobi/ICE-dev/tree/main/S3/02/output) | [analysis code](https://github.com/nencki-lobi/ICE-dev/tree/main/S3_data_analysis.Rmd)
-
 
 ## How to use
 
-To reproduce the analysis for Studies 1-3, run:
+To reproduce the analysis for Studies 1-2, run:
 
 * Study 1, 7 factors solution ([HTML report](https://github.com/nencki-lobi/ICE-dev/tree/main/S1_data_analysis_report_7_factors.html)):
 
@@ -36,15 +34,9 @@ rmarkdown::render("S1_data_analysis.Rmd", output_file = "S1_data_analysis_report
 rmarkdown::render("S2_data_analysis.Rmd", output_file = "S2_data_analysis_report.html")
 ```
 
-* Study 3 ([HTML report](https://github.com/nencki-lobi/ICE-dev/tree/main/S3_data_analysis_report.html)):
-
-```
-rmarkdown::render("S3_data_analysis.Rmd", output_file = "S3_data_analysis_report.html")
-```
-
 ## Requirements
 
-The following R packages are required: `astatur`, `car`, `coin`, `corrtable`, `gdata`, `ggsignif`, `gridExtra`, `Hmisc`, `knitr`,  `lavaan`, `mvnormalTest`, `psych`, `rNuggets`, `rptR`, `semTools`, `stats`, `tidyr`, `tidySEM`, `tidyverse`, `vegan`.
+The following R packages are required: `astatur`, `car`, `coin`, `corrtable`, `gdata`, `ggsignif`, `gridExtra`, `Hmisc`, `knitr`,  `lavaan`, `mvnormalTest`, `psych`, `rNuggets`, `semTools`, `stats`, `tidySEM`, `tidyverse`, `vegan`.
 
 Optional, but useful for working with PostgreSQL databases: `RPostgreSQL`.
 
